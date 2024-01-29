@@ -73,8 +73,10 @@ Here, we merge the morphological data with the trait data. We then export the me
 
 ```{r}
 # Merge morphology dataset with ecological trait dataset
+# binary ecologies
 salamanders_bi <- merge(salamanders.subset, traits_bi.subset, by="Genus_Species", 
                    all.x = TRUE, all.y = FALSE)
+#categorical ecologies (main dataframe that will be used)
 salamanders <- merge(salamanders.subset, traits.subset, by="Genus_Species", 
                    all.x = TRUE, all.y = FALSE)
 
