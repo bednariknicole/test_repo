@@ -1,0 +1,589 @@
+---
+title: "Further Analysis"
+author: "Nicole Bednarik & Katie Thomas"
+date: 9 September 2022
+output:
+  html_document:
+    theme: flatly
+    toc: TRUE
+    toc_float: TRUE
+    code_fold: show
+---
+
+```{r setup, include = FALSE}
+
+# Load package libraries
+library(plyr)
+library(geiger)
+library(caper)
+library(plotly)
+library(kableExtra)
+library(gridExtra)
+library(ggimage)
+library(grid)
+library(gtable)
+library(cowplot)
+library(knitr)
+library(tidyverse)
+
+# Markdown settings
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE, fig.height = 4.5, fig.width=8)
+
+```
+
+# Data
+
+First we import our tidied salamander morphology & trait binary dataset with the residuals of a cornea ~ cube root of mass PGLS as a column.
+
+```{r load-data}
+
+# Import tidied salamander eye size and trait data
+sal.res <- data.frame(read.csv("../Data/Tidy/salamanders_residuals_binary3.csv", header=TRUE, na.strings=c("", "NA", " ","<1")))
+sal.res.2 <- data.frame(read.csv("../Data/Tidy/salamanders_residuals_updated1.csv", header=TRUE, na.strings=c("", "NA", " ", "<1")))
+aquaticspecies <- data.frame(read.csv("../Data/Raw/aquaticspecies.csv", header=TRUE, na.strings=c("", "NA", " ", "<1")))
+
+# Quick look at data structure
+str(sal.res)
+str(sal.res.2)
+
+#sal.res <- sal.res[-c(35:460)]
+
+```
+
+# Habitat plot for Aquatic Species
+
+```{r}
+#see what the levels of development are named
+levels(as.factor(sal.res.2$Activity.Period))
+
+#define a colorblind-friendly vector of colors for adult habitat
+col_haba <- c("lentic water" = "#0066CC",
+             "lotic water" = "#66CCFF")
+
+#now you can see that each habitat is assigned a hex color when you look at the vector
+col_haba
+
+#make a vector of point shapes for adult habitat
+shape_haba <- c("direct development" = 25,
+             "metamorphosizing" = 24,
+             "paedomorphic" = 23)
+
+#see that each state has a shape now
+shape_haba
+```
+
+```{r}
+#boxplot of pgls residuals vs. aquatic species water environment (relative eye size)
+habitat.rel <- ggplot(data = filter(aquaticspecies, !is.na(Adult.Habitat)), aes(x = reorder(Adult.Habitat, pglsres.cdmass, fun=mean), y=pglsres.cdmass, fill=Adult.Habitat, shape=Adult.Habitat)) +
+  geom_boxplot(notch = FALSE, outlier.shape = NA, alpha=0.5) +
+  stat_summary(fun.y = mean, colour="black", geom="point", size=3, show_guide = FALSE) +
+  geom_jitter(aes(text = Species, shape = Adult.Habitat), size = 1.3, alpha = 0.3, position = position_jitter(0.15)) +
+  theme(text = element_text(size=14), panel.background = element_blank(), axis.line = element_line(colour = "black")) +
+  theme(axis.text = element_text(angle = 0, size = 9)) +
+  ylab("Relative cornea size") +
+  xlab("Adult Habitat for Aquatic Species") +
+  theme(legend.position = "none") +
+# use our custom colors for habitat
+  scale_fill_manual(values = col_haba, name = "Adult Habitat") +
+# use our custom shapes for points
+  scale_shape_manual(values = shape_haba, name = "Adult Habitat") 
+
+#print plot
+habitat.rel
+
+#look at the plot with the plotly package - you can hover over data points to see what each species is, great way to check outliers!
+library(plotly)
+ggplotly(habitat.rel)
+
+```
+
+# Activity period plot
+
+(I think you started editing this one for development but you have that farther down so maybe this one should be activity period? No colors defined for activity period)
+
+```{r}
+#boxplot of pgls residuals vs. activity period (relative eye size)
+activityperiod.rel <- ggplot(data = filter(sal.res.2, !is.na(Activity.Period)), aes(x = reorder(Activity.Period, pglsres.cdmass, fun=mean), y=pglsres.cdmass, fill=Activity.Period, shape=Activity.Period)) +
+  geom_boxplot(notch = FALSE, outlier.shape = NA, alpha=0.5) +
+  stat_summary(fun.y = mean, colour="black", geom="point", size=3, show_guide = FALSE) +
+  geom_jitter(aes(text = Genus_Species, shape = Activity.Period), size = 1.3, alpha = 0.3, position = position_jitter(0.15)) +
+  theme(text = element_text(size=14), panel.background = element_blank(), axis.line = element_line(colour = "black")) +
+  theme(axis.text = element_text(angle = 0, size = 9)) +
+  ylab("Relative cornea size") +
+  xlab("Activity Period") +
+  theme(legend.position = "none") +
+# use our custom colors for habitat
+  scale_fill_manual(values = col_dev, name = "Activity Period") +
+# use our custom shapes for points
+  scale_shape_manual(values = shape_dev, name = "Activity Period") 
+
+#print plot
+activityperiod.rel
+
+#look at the plot with the plotly package - you can hover over data points to see what each species is, great way to check outliers!
+library(plotly)
+ggplotly(activityperiod.rel)
+
+```
+
+# Development PGLS
+
+```{r}
+# Run development pgls--------
+#PGLS cornea diameter vs. cube root of mass + habitat
+pgls_dev <- pgls(log10(cor_av) ~ log10(rootmass_av) + Development,
+               data = sal.comp, 
+               lambda = "ML", #uses Maximum Likelihood estimate of lambda
+               param.CI = 0.95)
+#diagnostic plots
+par(mar = c(4,4,2,2))
+par(mfrow = c(2, 2))
+plot(pgls_dev)
+par(mfrow = c(1, 1))
+#Likelihood plot for Pagel's lambda. Solid red line indicates estimate for lambda and broken red lines indcaite the 95% confidence interval
+lambda.dev <- pgls.profile(pgls_dev, "lambda")
+plot(lambda.dev)
+#main effects
+anova(pgls_dev)
+#print model output 
+summary(pgls_dev)
+
+
+```
+
+# Development Plot
+
+```{r}
+#see what the levels of development are named
+levels(as.factor(sal.res.2$Development))
+
+#define a colorblind-friendly vector of colors for adult habitat
+col_dev <- c("direct development" = "chartreuse3",
+             "metamorphosizing" = "steelblue3",
+             "paedomorphic" = "slateblue1")
+
+#now you can see that each habitat is assigned a hex color when you look at the vector
+col_dev
+
+#make a vector of point shapes for adult habitat
+shape_dev <- c("direct development" = 25,
+             "metamorphosizing" = 24,
+             "paedomorphic" = 23)
+
+#see that each state has a shape now
+shape_dev
+```
+
+```{r}
+#boxplot of pgls residuals vs. development (relative eye size)
+development.rel <- ggplot(data = filter(sal.res.2, !is.na(Development)), aes(x = reorder(Development, pglsres.cdmass, fun=mean), y=pglsres.cdmass, fill=Development, shape=Development)) +
+  geom_boxplot(notch = FALSE, outlier.shape = NA, alpha=0.5) +
+  stat_summary(fun.y = mean, colour="black", geom="point", size=3, show_guide = FALSE) +
+  geom_jitter(aes(text = Genus_Species, shape = Development), size = 1.3, alpha = 0.3, position = position_jitter(0.15)) +
+  theme(text = element_text(size=14), panel.background = element_blank(), axis.line = element_line(colour = "black")) +
+  theme(axis.text = element_text(angle = 0, size = 9)) +
+  ylab("Relative cornea size") +
+  xlab("Development Mode") +
+  theme(legend.position = "none") +
+# use our custom colors for habitat
+  scale_fill_manual(values = col_dev, name = "Development") +
+# use our custom shapes for points
+  scale_shape_manual(values = shape_dev, name = "Development") 
+
+#print plot
+development.rel
+
+#look at the plot with the plotly package - you can hover over data points to see what each species is, great way to check outliers!
+library(plotly)
+ggplotly(development.rel)
+
+```
+
+# Color  figures with pallettes in the frog paper
+
+Here I will just re-run the code to make the figures you want for your poster, with a custom color pallette so that the habitat categories will be the same for all of them. 
+
+First we define what we want that color pallette to be:
+
+```{r}
+#see what the levels of adult habitat are named
+levels(as.factor(sal.res.2$Adult.Habitat))
+
+#define a colorblind-friendly vector of colors for adult habitat
+col_hab <- c("aquatic" = "#0072B2",
+             "scansorial" = "#009E73",
+             "semiaquatic" = "#56B4E9",
+             "subfossorial" = "#CC79A7",
+             "terrestrial" = "#E69F00")
+
+#see what the levels of adult habitat are named
+levels(as.factor(sal.res.3$Paedomorphic))
+col_dev2 <- c("yes" = "#000000",
+              "no" = "FFFFFF")
+
+#now you can see that each habitat is assigned a hex color when you look at the vector
+col_hab
+
+#make a vector of point shapes for adult habitat
+shape_hab <- c("aquatic" = 25,
+             "scansorial" = 24,
+             "semiaquatic" = 22,
+             "subfossorial" = 21,
+             "terrestrial" = 23)
+
+#see that each state has a shape now
+shape_hab
+```
+
+## Merge datasets
+
+```{r}
+sal.res.3 <- merge(sal.res, sal.res.2, by="Genus_Species")
+
+```
+
+## Boxplot adult habitat figure
+
+You've already made a nice boxplot of adult habitats and relative eye size, so now we can just modify that plot to make it nicer, ordered sensibly, and colored how we want. 
+
+```{r}
+
+#boxplot of pgls residuals vs. adult habitat (relative eye size)
+adult_habitat.rel <- ggplot(data = filter(sal.res.2, !is.na(Adult.Habitat)), aes(x = reorder(Adult.Habitat, pglsres.cdmass, fun = mean), y = pglsres.cdmass, fill=Adult.Habitat, shape = Adult.Habitat)) +
+  geom_boxplot(notch = FALSE, outlier.shape = NA, alpha = 0.5) +
+  stat_summary(fun.y = mean, colour="black", geom="point", size=3, show_guide = FALSE) +
+  geom_jitter(aes(text = Genus_Species, shape = Adult.Habitat, color=Development), size = 2, alpha = 0.8, position = position_jitter(0.15)) +
+  scale_fill_manual (name="Development", values=c("grey40", "lightskyblue", "blue40")) +
+  theme(text = element_text(size=14), panel.background = element_blank(), axis.line = element_line(colour = "black")) +
+  theme(axis.text = element_text(angle = 0, size = 9)) +
+  ylab("Relative cornea size") +
+  xlab("Adult habitat") +
+  theme(legend.position = "right") +
+# use our custom colors for habitat
+  scale_fill_manual(values = col_hab, name = "Adult habitat") +
+# use our custom shapes for points
+  scale_shape_manual(values = shape_hab, name = "Adult habitat") 
+  
+
+#print plot
+adult_habitat.rel
+
+#look at the plot with the plotly package - you can hover over data points to see what each species is, great way to check outliers!
+library(plotly)
+ggplotly(adult_habitat.rel)
+
+#export plot to pdf - you can change the export dimensions by changing the height and width numbers to make it fit well on your poster!
+pdf(file = "boxplots.pdf", height=4, width=6)
+adult_habitat.rel
+dev.off()
+
+```
+```{r}
+
+#boxplot of pgls residuals vs. adult habitat (relative eye size)
+adult_habitat.abs <- ggplot(data = filter(sal.res.2, !is.na(Adult.Habitat)), aes(x = reorder(Adult.Habitat, cor_av, fun = mean), y = cor_av, fill=Adult.Habitat, shape = Adult.Habitat)) +
+  geom_boxplot(notch = FALSE, outlier.shape = NA, alpha = 0.5) +
+  stat_summary(fun.y = mean, colour="black", geom="point", size=3, show_guide = FALSE) +
+  geom_jitter(aes(text = Genus_Species), size = 2, alpha = 0.8, position = position_jitter(0.15)) +
+  theme(text = element_text(size=14), panel.background = element_blank(), axis.line = element_line(colour = "black")) +
+  theme(axis.text = element_text(angle = 0, size = 9)) +
+  ylab("Absolute cornea size") +
+  xlab("Adult habitat") +
+  theme(legend.position = "right") +
+# use our custom colors for habitat
+  scale_fill_manual(values = col_hab, name = "Adult habitat") +
+# use our custom shapes for points
+  scale_shape_manual(values = shape_hab, name = "Adult habitat") 
+  
+
+#print plot
+adult_habitat.abs
+
+#look at the plot with the plotly package - you can hover over data points to see what each species is, great way to check outliers!
+library(plotly)
+ggplotly(adult_habitat.abs)
+
+#export plot to pdf - you can change the export dimensions by changing the height and width numbers to make it fit well on your poster!
+pdf(file = "absboxplots.pdf", height=4, width=6)
+adult_habitat.abs
+dev.off()
+
+```
+
+```{r}
+
+#boxplot of pgls residuals vs. adult habitat (relative eye size)
+adult_habitat.abseye <- ggplot(data = filter(sal.res.2, !is.na(Adult.Habitat)), aes(x = reorder(Adult.Habitat, eye_av, fun = mean), y = eye_av, fill=Adult.Habitat, shape = Adult.Habitat)) +
+  geom_boxplot(notch = FALSE, outlier.shape = NA, alpha = 0.5) +
+  stat_summary(fun.y = mean, colour="black", geom="point", size=3, show_guide = FALSE) +
+  geom_jitter(aes(text = Genus_Species), size = 2, alpha = 0.8, position = position_jitter(0.15)) +
+  theme(text = element_text(size=14), panel.background = element_blank(), axis.line = element_line(colour = "black")) +
+  theme(axis.text = element_text(angle = 0, size = 9)) +
+  ylab("Absolute eye size") +
+  xlab("Adult habitat") +
+  theme(legend.position = "right") +
+# use our custom colors for habitat
+  scale_fill_manual(values = col_hab, name = "Adult habitat") +
+# use our custom shapes for points
+  scale_shape_manual(values = shape_hab, name = "Adult habitat") 
+  
+
+#print plot
+adult_habitat.abseye
+
+#look at the plot with the plotly package - you can hover over data points to see what each species is, great way to check outliers!
+library(plotly)
+ggplotly(adult_habitat.abseye)
+
+#export plot to pdf - you can change the export dimensions by changing the height and width numbers to make it fit well on your poster!
+pdf(file = "absboxplots.pdf", height=4, width=6)
+adult_habitat.abseye
+dev.off()
+
+```
+
+```{r}
+#see what the levels of pupil shape are named
+levels(as.factor(sal.res.2$Pupils))
+
+#define a colorblind-friendly vector of colors for adult habitat
+col_pupil <- c("horizontal_oval" = "#009E73",
+             "symmetrical_circle" = "#56B4E9",
+             "horizontal_slit" = "#CC79A7",
+             "horizontal_upside_down_triangle" = "#E69F00")
+
+#now you can see that each habitat is assigned a hex color when you look at the vector
+col_pupil
+
+#make a vector of point shapes for adult habitat
+shape_pupil <- c("horizontal_oval" = 25,
+             "symmetrical_circle" = 24,
+             "horizontal_slit" = 22,
+             "horizontal_upside_down_triangle" = 21)
+
+#see that each state has a shape now
+shape_pupil
+```
+
+```{r}
+#boxplot of pgls residuals vs. pupil shape (relative eye size)
+pupil_shape.rel <- ggplot(data = filter(sal.res.2, !is.na(Pupils)), aes(x = reorder(Pupils, pglsres.cdmass, fun = mean), y = pglsres.cdmass, fill=Pupils)) +
+  geom_boxplot(notch = FALSE, outlier.shape = NA, alpha = 0.5) +
+  stat_summary(fun.y = mean, colour="black", geom="point", size=3, show_guide = FALSE) +
+  geom_jitter(aes(text = Genus_Species), size = 0.5, alpha = 0.8, position = position_jitter(0.15)) +
+  theme(text = element_text(size=14), panel.background = element_blank(), axis.line = element_line(colour = "black")) +
+  theme(axis.text = element_text(angle = 0, size = 9)) +
+  ylab("Relative cornea size") +
+  xlab("Pupil Shape") +
+  theme(legend.position = "right") +
+# use our custom colors for pupil shape
+  scale_fill_manual(values = col_pupil, name = "Pupil shape") 
+
+  
+
+#print plot
+pupil_shape.rel
+
+#look at the plot with the plotly package - you can hover over data points to see what each species is, great way to check outliers!
+library(plotly)
+ggplotly(pupil_shape.rel)
+
+#export plot to pdf - you can change the export dimensions by changing the height and width numbers to make it fit well on your poster!
+pdf(file = "boxplots.pdf", height=4, width=6)
+pupil_shape.rel
+dev.off()
+
+```
+
+```{r}
+#see what the levels of pupil shape are named
+levels(as.factor(sal.res$Pupils_binary))
+
+#define a colorblind-friendly vector of colors for adult habitat
+col_pupil_binary <- c("horizontal" = "#009E73",
+             "circle" = "#56B4E9")
+
+#now you can see that each habitat is assigned a hex color when you look at the vector
+col_pupil_binary
+
+#make a vector of point shapes for adult habitat
+shape_pupil_binary <- c("horizontal" = 25,
+             "circle" = 24)
+
+#see that each state has a shape now
+shape_pupil_binary
+```
+
+```{r}
+#boxplot of pgls residuals vs. pupil shape - binary (relative eye size)
+pupil_shape_binary.rel <- ggplot(data = filter(sal.res, !is.na(Pupils_binary)), aes(x = reorder(Pupils_binary, pglsres.cdmass, fun = mean), y = pglsres.cdmass, fill=Pupils_binary)) +
+  geom_boxplot(notch = FALSE, outlier.shape = NA, alpha = 0.5) +
+  stat_summary(fun.y = mean, colour="black", geom="point", size=3, show_guide = FALSE) +
+  geom_jitter(aes(text = Genus_Species), size = 0.5, alpha = 0.8, position = position_jitter(0.15)) +
+  theme(text = element_text(size=14), panel.background = element_blank(), axis.line = element_line(colour = "black")) +
+  theme(axis.text = element_text(angle = 0, size = 9)) +
+  ylab("Relative cornea size") +
+  xlab("Pupil Shape") +
+  theme(legend.position = "right") +
+# use our custom colors for pupil shape
+  scale_fill_manual(values = col_pupil_binary, name = "Pupil shape") 
+
+  
+
+#print plot
+pupil_shape_binary.rel
+
+#look at the plot with the plotly package - you can hover over data points to see what each species is, great way to check outliers!
+library(plotly)
+ggplotly(pupil_shape_binary.rel)
+
+#export plot to pdf - you can change the export dimensions by changing the height and width numbers to make it fit well on your poster!
+pdf(file = "boxplots.pdf", height=4, width=6)
+pupil_shape_binary.rel
+dev.off()
+
+```
+
+
+```{r}
+#boxplot of pgls residuals vs. development (relative eye size)
+development.rel <- ggplot(data = filter(sal.res.2, !is.na(Development)), aes(x = reorder(Development, pglsres.cdmass, fun=mean), y=pglsres.cdmass, fill=Development, shape=Development)) +
+  geom_boxplot(notch = FALSE, outlier.shape = NA, alpha=0.5) +
+  stat_summary(fun.y = mean, colour="black", geom="point", size=3, show_guide = FALSE) +
+  geom_jitter(aes(text = Genus_Species, shape = Development), size = 1.3, alpha = 0.3, position = position_jitter(0.15)) +
+  theme(text = element_text(size=14), panel.background = element_blank(), axis.line = element_line(colour = "black")) +
+  theme(axis.text = element_text(angle = 0, size = 9)) +
+  ylab("Relative cornea size") +
+  xlab("Development Mode") +
+  theme(legend.position = "none") +
+# use our custom colors for habitat
+  scale_fill_manual(values = col_dev, name = "Development") +
+# use our custom shapes for points
+  scale_shape_manual(values = shape_dev, name = "Development") 
+
+#print plot
+development.rel
+
+#look at the plot with the plotly package - you can hover over data points to see what each species is, great way to check outliers!
+library(plotly)
+ggplotly(development.rel)
+
+```
+```{r}
+#see what the levels of pupil shape are named
+levels(as.factor(sal.res.2$Pupils))
+
+#define a colorblind-friendly vector of colors for adult habitat
+col_pupil <- c("horizontal_oval" = "#009E73",
+             "symmetrical_circle" = "#56B4E9",
+             "horizontal_slit" = "#CC79A7",
+             "horizontal_upside_down_triangle" = "#E69F00")
+
+#now you can see that each habitat is assigned a hex color when you look at the vector
+col_pupil
+
+#make a vector of point shapes for adult habitat
+shape_pupil <- c("horizontal_oval" = 25,
+             "symmetrical_circle" = 24,
+             "horizontal_slit" = 22,
+             "horizontal_upside_down_triangle" = 21)
+
+#see that each state has a shape now
+shape_pupil
+```
+
+#boxplot of pgls residuals vs. development (relative eye size)
+development.rel <- ggplot(data = filter(sal.res.2, !is.na(Development)), aes(x = reorder(Development, pglsres.cdmass, fun=mean), y=pglsres.cdmass, fill=Development, shape=Development)) +
+  geom_boxplot(notch = FALSE, outlier.shape = NA, alpha=0.5) +
+  stat_summary(fun.y = mean, colour="black", geom="point", size=3, show_guide = FALSE) +
+  geom_jitter(aes(text = Genus_Species, shape = Development), size = 1.3, alpha = 0.3, position = position_jitter(0.15)) +
+  theme(text = element_text(size=14), panel.background = element_blank(), axis.line = element_line(colour = "black")) +
+  theme(axis.text = element_text(angle = 0, size = 9)) +
+  ylab("Relative cornea size") +
+  xlab("Development Mode") +
+  theme(legend.position = "none") +
+# use our custom colors for habitat
+  scale_fill_manual(values = col_dev, name = "Development") +
+# use our custom shapes for points
+  scale_shape_manual(values = shape_dev, name = "Development") 
+
+#print plot
+development.rel
+
+#look at the plot with the plotly package - you can hover over data points to see what each species is, great way to check outliers!
+library(plotly)
+ggplotly(development.rel)
+
+
+```{r}
+#pupil shape versus eye size
+pupilshape.rel <- ggplot(data = filter(sal.res.2, !is.na(Pupils)), aes(x = reorder(Pupils, pglsres.cdmass, fun=mean), y=pglsres.cdmass, fill=Pupils)) +
+  geom_boxplot(notch = FALSE, outlier.shape = NA, alpha=0.5) +
+  stat_summary(fun.y = mean, colour="black", geom="point", size=3, show_guide = FALSE) +
+  geom_jitter(aes(text = Genus_Species, shape = Pupils), size = 1.3, alpha = 0.3, position = position_jitter(0.15)) +
+  theme(text = element_text(size=14), panel.background = element_blank(), axis.line = element_line(colour = "black")) +
+  theme(axis.text = element_text(angle = 0, size = 9)) +
+  ylab("Relative cornea size") +
+  xlab("Pupils") +
+  theme(legend.position = "none") +
+# use our custom colors for habitat
+  scale_fill_manual(values = col_pupil, name = "Pupils") +
+# use our custom shapes for points
+  scale_shape_manual(values = shape_pupil, name = "Pupils") 
+
+#print plot
+pupilshape.rel
+
+#look at the plot with the plotly package - you can hover over data points to see what each species is, great way to check outliers!
+library(plotly)
+ggplotly(pupilshape.rel)
+```
+
+
+```{r}
+#Adult Habitat by pupil shape
+pup.hab <- ggplot(data = filter(sal.res.2, !is.na(Pupils)), aes(x=Adult.Habitat, fill=Pupils)) +
+  geom_bar(position="dodge") + 
+  theme(text = element_text(size=14), panel.background = element_blank(), axis.line = element_line(colour = "black")) +
+  theme(axis.text = element_text(angle = 0, size = 9)) +
+  ylab("count") +
+  xlab("Adult Habitat") +
+  theme(legend.position = "right") +
+# use our custom colors for pupils
+  scale_fill_manual(values = col_pupil, name = "Pupil shape") 
+
+#print plot
+pup.hab
+
+#look at the plot with the plotly package - you can hover over data points to see what each species is, great way to check outliers!
+library(plotly)
+ggplotly(pup.hab)
+
+```
+
+```{r}
+#Development by pupil shape
+pup.dev <- ggplot(data = filter(sal.res.2, !is.na(Pupils)), aes(x=Development, fill=Pupils)) +
+  geom_bar(position="dodge") + 
+  theme(text = element_text(size=14), panel.background = element_blank(), axis.line = element_line(colour = "black")) +
+  theme(axis.text = element_text(angle = 0, size = 9)) +
+  ylab("count") +
+  xlab("Development") +
+  theme(legend.position = "right") +
+# use our custom colors for pupils
+  scale_fill_manual(values = col_pupil, name = "Pupil shape") 
+
+#print plot
+pup.dev
+
+#look at the plot with the plotly package - you can hover over data points to see what each species is, great way to check outliers!
+library(plotly)
+ggplotly(pup.dev)
+
+```
+
+```{r}
+chisq.test(sal.res.2$Adult.Habitat, sal.res.2$Pupils, correct=FALSE)
+
+chisq.test(sal.res.2$Development, sal.res.2$Pupils, correct=FALSE)
+```

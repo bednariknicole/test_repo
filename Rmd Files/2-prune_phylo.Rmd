@@ -1,0 +1,220 @@
+---
+title: "Prune amphibian phylogeny to salamander dataset"
+author: "Katie Thomas"
+date: 16 July 2022
+output:
+  html_document:
+    code_fold: show
+    theme: flatly
+    toc: no
+    toc_float: no
+---
+
+<style type="text/css">
+
+body{ /* Normal  */
+      font-size: 17px;
+  }
+  
+</style>
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+#load packages
+library(ape)
+library(geiger)
+library(picante)
+library(caper)
+library(geiger)
+library(phytools)
+library(knitr)
+library(tidyverse)
+library(dplyr)
+```
+
+# Load data
+
+Here we load the list of species that we sampled eye size for - the subset that we want to trim the phylogeny to match. 
+
+```{r load-data, results="hide"}
+
+# Load pupil data ---------
+
+#import adult data 
+caudata_raw <- read.csv("../Data/Raw/salamander_names.csv", 
+                    header=TRUE, 
+                    na.strings=c("", "NA", " "))
+#remove Eurycea rathbuni and Proteus anguinus (blind salamanders) 
+caudata_raw <- caudata_raw[-c(90, 117),]
+
+#check out structure
+str(caudata_raw)
+
+#tidy adult data
+tip_species <- caudata_raw %>% 
+  dplyr::select(Genus_Species, Family)
+
+# check for duplicates of species
+n_occur <- data.frame(table(tip_species$Genus_Species))
+#View(n_occur)
+```
+
+# Load published phylogeny
+
+Here we import an amphibian tree published by Jetz and Pyron (2019). It's important to note that this tree includes branches supported by molecular data as well as branches that are grafted on based on taxonomy. 
+
+We check whether the tree is rooted (it is) and whether it is reading as ultrametric (it should be, but is not, so we force it using force.ultrametric) and then look at the full tree. 
+
+```{r pryontree, fig.height=8, fig.width=8, echo = TRUE}
+
+#Import ultrametric phylogeny (modified) from Jetz and Pyron 2019
+tree_orig <- read.tree(file = "../Data/Raw/amph_shl_new_Consensus_7238.tre") #reads tree
+
+#check whether tree is rooted
+is.rooted(tree_orig) 
+
+#check whether tree is dichotomous (no polytomies)
+is.binary(tree_orig) 
+
+#check that tree is ultrametric
+is.ultrametric(tree_orig)
+
+#force ultrametric
+tree <- force.ultrametric(tree_orig)
+
+#check that tree is ultrametric
+is.ultrametric(tree)
+
+#plot tree
+plot.phylo(tree, show.tip.label = F)
+
+```
+
+# Match names in tree and phylogeny
+
+First, we find species that are in our dataset that aren't found as exact matches in the phylogeny tip labels. 
+
+```{r}
+#find species in dataset that don't exist as phylogeny tip label
+tip_species[which(!tip_species$Genus_Species %in% as.vector(tree$tip.label)), ]
+
+```
+
+There are 5 species that don't appear in the phylogeny. Four of these are issues because they are subspecies. We group these with other subspecies we sampled in the same species unless they are a clearly recognized clade. According to Frost (2022) I will relabel _Cryptobranchus alleganiensis alleganiensis_ as _Cryptobranchus alleganiensis_ (which we already have in the list),  _Hynobius naevius naevius_ as _Hynobius naevius_ (which we didn't have in the list), _Ensatina eschscholtzii eschscholtzii_ as _Ensatina eschscholtzii_ (which we didn't have in the list), and _Eurycea_longicauda_longicauda_ as _Eurycea_longicauda_ (which we already have in the list). The other species not found may have synonyms listed in the phylogeny tip labels, so we can view the phylogeny tips and search for matches. 
+
+```{r}
+phylo.tips <- as.data.frame(tree$tip.label)
+```
+
+After looking at Frost (2022) and searching through the phylogeny tips, _Aenides niger_ is not found in the tree, but it previously was a subspecies of _Aneides flavipunctatus_, which is present in the tree. We also have that species in our dataset, so I will graft on a branch that is sister to A. flavipunctatus for A. niger. 
+
+```{r}
+#copy tree for editing
+tree_graft <- tree
+
+#find most recent common ancestor of Aneides flavipunctatus and sister clade of Aneides_vagrans + Aneides_ferreus
+bind.node <- findMRCA(tree_graft, 
+                      tips = c("Aneides_flavipunctatus", "Aneides_vagrans", "Aneides_ferreus"), 
+                      type = "node")
+
+#add A. niger to that node
+tree_graft2 <- bind.tip(tree = tree_graft, 
+                        tip.label = "Aneides_niger", 
+                        where = bind.node)
+```
+
+
+Next we will make a column of names that match the phylogeny and also get rid of the subspecies levels. 
+
+```{r}
+
+names <- tip_species %>%
+  #add column for data names
+  mutate(data_names = Genus_Species) %>%
+  #get rid of subspecies from species names
+  mutate(data_names = recode(data_names, 
+                             Cryptobranchus_alleganiensis_alleganiensis = "Cryptobranchus_alleganiensis",
+                             Hynobius_naevius_naevius = "Hynobius_naevius", 
+                             Ensatina_eschscholtzii_eschscholtzii = "Ensatina_eschscholtzii",
+                             Eurycea_longicauda_longicauda = "Eurycea_longicauda")) %>%
+  #add column for phylogeny names
+  mutate(phylo_names = data_names) %>%
+  #remove rows with duplicated species names
+  filter(!duplicated(phylo_names))
+```
+
+Now we can check that our names in the dataset are matching those in the phylogeny. Now that we've consolidated subspecies into species, we have 157 species with data that we want to match the tree. 
+
+```{r}
+#find difference between tree and dataset
+rownames(names) <- names$phylo_names
+overlap <- name.check(tree_graft2, names)
+
+#species in data that aren't matching tree
+overlap$data_not_tree
+```
+
+All the species are now matching! Now we prune the tree to match the species in our dataset. 
+
+```{r}
+#make list of taxa to drop (in tree but not in dataset)
+drops <- setdiff(tree_graft2$tip.label, names$phylo_names)
+
+#drop unwanted tips from phylogeny
+tree.pruned <- drop.tip(phy = tree_graft2, tip = drops) 
+
+#see which tips you've kept in your phylogeny
+#tree.pruned$tip.label
+  
+#check that phylogeny tips and data match exactly (if they match will return "OK")
+name.check(tree.pruned, names)
+```
+
+The pruned tree tip labels and the dataset species names match exactly. We can plot the tree to check that it looks good. 
+
+```{r, fig.height=25, fig.width=9}
+
+#plot pruned tree with polytomies
+plot.phylo(tree.pruned, show.tip.label = TRUE)
+
+```
+
+We also check that the tree is still rooted and ultrametric. 
+
+```{r}
+#confirm that tree is rooted
+is.rooted(tree.pruned) 
+
+#check that tree is still ultrametric
+is.ultrametric(tree.pruned)
+```
+
+Finally, because we added a polytomy our tree will not be binary. For analyses, we will need it to be, so we can randomly resolve polytomies by adding in tiny differences so that we can use statistical methods like PGLS. 
+
+```{r}
+#test whether tree is dichotomous (shouldn't be yet)
+is.binary(tree.pruned)
+
+#randomly resolve polytomies to make tree dichotomous using multi2di function in ape
+dich.tree <- multi2di(tree.pruned)
+
+#check that tree is now binary
+is.binary(dich.tree)
+```
+
+The tree is now dichotomous. We will take one final look at the tree to check that it looks ok and then export as a nexus file for use in our analyses. 
+
+```{r, fig.height=25, fig.width=9}
+#plot final tree
+plot.phylo(dich.tree, show.tip.label = TRUE)
+```
+
+Looks good! Now we export. 
+
+```{r}
+#export final tree
+write.nexus(dich.tree, file = "../Data/Tidy/caudata-tree.nex")
+```
+

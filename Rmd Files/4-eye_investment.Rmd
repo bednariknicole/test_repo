@@ -1,0 +1,311 @@
+---
+title: "Salamander eye scaling and investment"
+author: "Nicole Bednarik & Katie Thomas"
+date: 8 August 2022
+output:
+  html_document:
+    theme: flatly
+    toc: TRUE
+    toc_float: TRUE
+    code_fold: show
+---
+
+```{r setup, include = FALSE}
+
+# Load package libraries
+library(plyr)
+library(smatr)
+library(picante)
+library(nlme)
+library(ape)
+library(evobiR)
+library(geiger)
+library(caper)
+library(phytools)
+library(phylotools)
+library(plotly)
+library(kableExtra)
+library(gridExtra)
+library(ggimage)
+#library(ggtree)
+library(grid)
+library(gtable)
+library(cowplot)
+library(knitr)
+library(mvMORPH)
+#library(evomap)
+library(tidyverse)
+library("dplyr")
+
+# Markdown settings
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE, fig.height = 4.5, fig.width=8)
+
+```
+
+# Data
+
+First we import our tidied salamander morphology & trait dataset. 
+
+```{r load-data}
+
+# Import tidied salamander eye size and trait data
+av.sal <- data.frame(read.csv("../Data/Tidy/salamanders_averages.csv", header=TRUE, na.strings=c("", "NA", " ","<1")))
+# Quick look at data structure
+str(av.sal)
+
+```
+
+Next, we import the amphibian tree from Jetz and Pyron (2019) that has been pruned to match the salamander species in this dataset.
+
+```{r, fig.height=18, fig.width=7}
+
+#Import pruned phylogeny
+caudatatree <- read.nexus("../Data/Tidy/caudata-tree.nex")
+
+#Plot tree
+plot.phylo(caudatatree, show.tip.label=TRUE, cex = 0.7)
+
+```
+
+# Interspecific allometry using PGLS
+
+In order to fit a PGLS regression in caper, we first need to make a comparative data object that includes our dataset and our phylogeny. Note that the gilled Pleurodeles waltl will be dropped from this, as there can only be one row for each species. 
+
+```{r}
+#Make row names of dataset the species names (so it will match phylogeny tips)
+rownames(av.sal) <- av.sal$Genus_Species
+
+#check that names match in dataframe and tree
+name.check(phy = caudatatree, data = av.sal)
+
+#use caper function to combine phylogeny and data into one object (this function also matches species names in tree and dataset)
+sal.comp <- comparative.data(phy = caudatatree, data = av.sal, 
+                            names.col = Genus_Species, vcv = TRUE, 
+                            na.omit = FALSE, warn.dropped = TRUE)
+
+#check for dropped tips or dropped species
+sal.comp$dropped$Genus_Species#phylogeny
+sal.comp$dropped$unmatched.rows #dataset
+
+```
+
+# Relative eye size and eye investment in salamanders
+
+To investigate how relative eye size differed across species with different ecological traits, we looked at the residuals from PGLS fits of cornea diameter vs. body size. 
+
+First, we added residuals of PGLS fits to our datasets by species.
+
+
+```{r pgls-residuals}
+#PGLS cornea diameter vs. cube root of mass ------------
+pgls_cdmass <- pgls(log10(cor_av) ~ log10(rootmass_av), 
+               data = sal.comp, 
+               lambda = "ML", #uses Maximum Likelihood estimate of lambda
+               param.CI = 0.95)
+
+#Residuals for PGLS of cornea diameter ~ cube root of mass
+
+#extract pgls residuals 
+pglsres.cdmass <- residuals(pgls_cdmass) 
+
+#name residuals
+colnames(pglsres.cdmass) <- "pglsres.cdmass" 
+
+#Making PGLS vector into a datagrame
+pglsres.cdmass <- as.data.frame(pglsres.cdmass)
+
+#Make rownames into a column so we can use merge command
+pglsres.cdmass <- tibble::rownames_to_column(pglsres.cdmass, "rn")
+
+#Renaming Genus_Species by making a new column then deleting the old one
+pglsres.cdmass$Genus_Species <- pglsres.cdmass$rn
+pglsres.cdmass$rn <- NULL
+
+#Merging datasets
+pglsres.cdmass.all <- merge(av.sal, pglsres.cdmass, by = "Genus_Species")
+
+```
+
+```{r}
+#PGLS eye diameter vs. cube root of mass ------------
+pgls_edmass <- pgls(log10(eye_av) ~ log10(rootmass_av), 
+               data = sal.comp, 
+               lambda = "ML", #uses Maximum Likelihood estimate of lambda
+               param.CI = 0.95)
+
+#Residuals for PGLS of eye diameter ~ cube root of mass
+
+#extract pgls residuals 
+pglsres.edmass <- residuals(pgls_edmass) 
+
+#name residuals
+colnames(pglsres.edmass) <- "pglsres.edmass" 
+
+#Making PGLS vector into a datagrame
+pglsres.edmass <- as.data.frame(pglsres.edmass)
+
+#Make rownames into a column so we can use merge command
+pglsres.edmass <- tibble::rownames_to_column(pglsres.edmass, "rn")
+
+#Renaming Genus_Species by making a new column then deleting the old one
+pglsres.edmass$Genus_Species <- pglsres.edmass$rn
+pglsres.edmass$rn <- NULL
+
+#Merging datasets
+pglsres.edmass.all <- merge(av.sal, pglsres.edmass, by = "Genus_Species")
+```
+
+```{r}
+#PGLS cornea diameter vs. SVL ------------
+pgls_cdsvl <- pgls(log10(cor_av) ~ log10(svl_av), 
+               data = sal.comp, 
+               lambda = "ML", #uses Maximum Likelihood estimate of lambda
+               param.CI = 0.95)
+
+#Residuals for PGLS of cornea diameter ~ snout-vent length
+
+#extract pgls residuals 
+pglsres.cdsvl <- residuals(pgls_cdsvl) 
+
+#name residuals
+colnames(pglsres.cdsvl) <- "pglsres.cdsvl" 
+
+#Making PGLS vector into a datagrame
+pglsres.cdsvl <- as.data.frame(pglsres.cdsvl)
+
+#Make rownames into a column so we can use merge command
+pglsres.cdsvl <- tibble::rownames_to_column(pglsres.cdsvl, "rn")
+
+#Renaming Genus_Species by making a new column then deleting the old one
+pglsres.cdsvl$Genus_Species <- pglsres.cdsvl$rn
+pglsres.cdsvl$rn <- NULL
+
+#Merging datasets
+pglsres.cdsvl.all <- merge(av.sal, pglsres.cdsvl, by = "Genus_Species")
+```
+
+```{r}
+#PGLS eye diameter vs. SVL ------------
+pgls_edsvl <- pgls(log10(eye_av) ~ log10(svl_av), 
+               data = sal.comp, 
+               lambda = "ML", #uses Maximum Likelihood estimate of lambda
+               param.CI = 0.95)
+
+#Residuals for PGLS of eye diameter ~ snout-vent length
+
+#extract pgls residuals 
+pglsres.edsvl <- residuals(pgls_edsvl) 
+
+#name residuals
+colnames(pglsres.edsvl) <- "pglsres.edsvl" 
+
+#Making PGLS vector into a datagrame
+pglsres.edsvl <- as.data.frame(pglsres.edsvl)
+
+#Make rownames into a column so we can use merge command
+pglsres.edsvl <- tibble::rownames_to_column(pglsres.edsvl, "rn")
+
+#Renaming Genus_Species by making a new column then deleting the old one
+pglsres.edsvl$Genus_Species <- pglsres.edsvl$rn
+pglsres.edsvl$rn <- NULL
+
+#Merging datasets
+pglsres.edsvl.all <- merge(av.sal, pglsres.edsvl, by = "Genus_Species")
+```
+
+## Phylogenetic distribution of absolute and relative eye size
+
+We then plotted absolute eye size and relative eye investment (represented by the residual of the eye size vs. body size PGLS) onto the salamander phylogeny. 
+
+```{r plot-phytools, fig.height = 15, fig.width = 8}
+
+# colorblind-friendly color vectors -------
+# create vector of colors for adult habitat
+col_hab <- c("aquatic" = "#0072B2",
+             "scansorial" = "#009E73",
+             "semiaquatic" = "#56B4E9",
+             "subfossorial" = "#CC79A7",
+             "terrestrial" = "#E69F00")
+
+#create vector of colors for activity period
+col_act <- c("both" = "deeppink3",
+             "diurnal" = "darkgoldenrod1", 
+             "nocturnal" = "blueviolet")
+
+# create vector of colors for larval habitat
+col_larv <- c("Lentic water" = "royalblue1", 
+         "Lotic water" = "skyblue1",
+         "No larvae" = "lightcoral",
+         "Obscured" = "darkslateblue",
+         "On land" = "lightpink4")
+
+# Prep data and phylogeny -----
+
+#subset data for cornea diameter and mass
+sal.bars.cdmass <- pglsres.cdmass.all %>%
+  mutate(tip = Genus_Species, 
+         abscor = cor_av, 
+         invcor = pglsres.cdmass, 
+         hab = Adult_Habitat,
+         act = Activity_Period,
+         larv = Larval_Habitat,
+         family = Family) %>%
+  select(tip, abscor, invcor, hab, act, larv, family)
+
+# set row names in dataset to match the tip labels in the tree
+row.names(sal.bars.cdmass) <- sal.bars.cdmass$tip
+
+#drop phylogeny tips not in dataset
+tree_cdmass <- drop.tip(caudatatree, caudatatree$tip.label[!(caudatatree$tip.label %in% sal.bars.cdmass$tip)])
+
+#ladderize tree
+tree_cdmass <- ladderize(tree_cdmass)
+
+#check that phylogeny and data match exactly
+name.check(tree_cdmass, sal.bars.cdmass)
+
+#resort trait dataset to the order of tree tip labels
+sal.bars.cdmass <- sal.bars.cdmass[tree_cdmass$tip.label, ] 
+
+#make trait vector for absolute cornea size
+abscor <- as.vector(sal.bars.cdmass$abscor) 
+
+#add tip label names to vector
+names(abscor) <- sal.bars.cdmass$tip 
+
+#make trait vector for cornea investment (PGLS residuals)
+inv.mass <- as.vector(sal.bars.cdmass$invcor) #residuals of pgls
+names(inv.mass) <- sal.bars.cdmass$tip
+
+#make trait vector of habitats
+habs.cdmass <- as.vector(sal.bars.cdmass$hab) 
+
+#make vector of colors corresponding to phylogeny tips
+tipcols.hab <- unname(col_hab[habs.cdmass]) 
+
+
+# Phylogeny with absolute cornea diameters -----
+
+#plot tree with cornea size bars and tip labels
+plotTree.wBars(tree_cdmass, abscor, 
+               scale = 0.04, 
+               tip.labels = TRUE, 
+               offset = 0.35,
+               ftype = "bi",
+               fsize = 0.8,
+               col = tipcols.hab)
+
+#add legend for habitat states
+legend(x = "left", legend = c("Aquatic", "Subfossorial", "Terrestrial", "Scansorial", "Semiaquatic"), pch = 22, pt.cex= 2, pt.bg = col_hab, cex = 1, bty = "n", horiz = F)
+
+# Phylogeny with relative eye size (compared to mass) -------
+
+#plot tree with relative eye size bars
+plotTree.wBars(tree_cdmass, inv.mass, 
+               scale = 0.7, 
+               tip.labels = FALSE, 
+               col = tipcols.hab,
+               plot = FALSE, 
+               add = TRUE)
+
+```
