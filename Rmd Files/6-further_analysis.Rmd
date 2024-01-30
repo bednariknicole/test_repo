@@ -31,6 +31,138 @@ knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE, fig.height 
 
 ```
 
+
+# Ecology statistics
+
+The habitat category looks the most interesting to me, so here we run a PGLS for eye-body allometry with habitat as a covariate to see if habitat has an effect on relative eye size in salamanders. 
+
+```{r}
+# Prep data and tree for analysis------
+#import phylogeny
+caudatatree <- read.nexus("../Data/Tidy/caudata-tree.nex")
+#Make row names of dataset the species names (so it will match phylogeny tips)
+rownames(sal.res.2) <- sal.res.2$Genus_Species
+#check that names match in dataframe and tree
+name.check(phy = caudatatree, data = sal.res.2)
+drops <- name.check(phy = caudatatree, data = sal.res.2)
+#drop the blind salamander from the phylogeny for plots
+tree.hab <- drop.tip(caudatatree, drops$tree_not_data)
+#use caper function to combine phylogeny and data into one object (this function also matches species names in tree and dataset)
+sal.comp <- comparative.data(phy = tree.hab, data = sal.res.2, 
+                            names.col = Genus_Species, vcv = TRUE, 
+                            na.omit = FALSE, warn.dropped = TRUE)
+#check for dropped tips or dropped species
+sal.comp$dropped$tips #phylogeny
+sal.comp$dropped$unmatched.rows #dataset
+
+#???levels((sal.comp$Adult.Habitat))???
+
+# Run habitat pgls--------
+#PGLS cornea diameter vs. cube root of mass + habitat
+pgls_hab <- pgls(log10(cor_av) ~ log10(rootmass_av) + Adult.Habitat,
+               data = sal.comp, 
+               lambda = "ML", #uses Maximum Likelihood estimate of lambda
+               param.CI = 0.95)
+#diagnostic plots
+par(mar = c(4,4,2,2))
+par(mfrow = c(2, 2))
+plot(pgls_hab)
+par(mfrow = c(1, 1))
+#Likelihood plot for Pagel's lambda. Solid red line indicates estimate for lambda and broken red lines indcaite the 95% confidence interval
+lambda.hab <- pgls.profile(pgls_hab, "lambda")
+plot(lambda.hab)
+#main effects
+anova(pgls_hab)
+#print model output 
+summary(pgls_hab)
+```
+Now we reorder the factor levels.
+```{r}
+#Display factor levels for adult habitat
+levels(sal.comp$Adult.Habitat)
+#Reorder factor levels for adult habitat
+sal.comp$Adult.Habitat <- factor(sal.comp$Adult.Habitat, levels=c('terrestrial', 'aquatic', 'scansorial', 'semiaquatic', 'subfossorial'))
+
+# Run habitat pgls--------
+#PGLS cornea diameter vs. cube root of mass + habitat
+pgls_hab <- pgls(log10(cor_av) ~ log10(rootmass_av) + Adult.Habitat,
+               data = sal.comp, 
+               lambda = "ML", #uses Maximum Likelihood estimate of lambda
+               param.CI = 0.95)
+#diagnostic plots
+par(mar = c(4,4,2,2))
+par(mfrow = c(2, 2))
+plot(pgls_hab)
+par(mfrow = c(1, 1))
+#Likelihood plot for Pagel's lambda. Solid red line indicates estimate for lambda and broken red lines indcaite the 95% confidence interval
+lambda.hab <- pgls.profile(pgls_hab, "lambda")
+plot(lambda.hab)
+#main effects
+anova(pgls_hab)
+#print model output 
+summary(pgls_hab)
+
+
+```
+
+# Color  figures with pallettes in the frog paper
+
+Here I will just re-run the code to make the figures you want for your poster, with a custom color pallette so that the habitat categories will be the same for all of them. 
+
+First we define what we want that color pallette to be:
+
+```{r}
+#see what the levels of adult habitat are named
+levels(as.factor(sal.res.2$Adult.Habitat))
+#define a colorblind-friendly vector of colors for adult habitat
+col_hab <- c("aquatic" = "#0072B2",
+             "scansorial" = "#009E73",
+             "semiaquatic" = "#56B4E9",
+             "subfossorial" = "#CC79A7",
+             "terrestrial" = "#E69F00")
+#now you can see that each habitat is assigned a hex color when you look at the vector
+col_hab
+#make a vector of point shapes for adult habitat
+shape_hab <- c("aquatic" = 25,
+             "scansorial" = 24,
+             "semiaquatic" = 22,
+             "subfossorial" = 21,
+             "terrestrial" = 23)
+#see that each state has a shape now
+shape_hab
+```
+
+
+## Phylogeny figures
+
+Here we re-make the phylogeny figure, but color the bars for absolute and relative eye size by adult habitat to mirror the other figures for the poster
+
+```{r}
+#make dataframe for labeling phylogeny figure
+sal.phy <- sal.res.2 %>%
+  #make column labeling tip labels that match phylogeny
+  mutate(tip = Genus_Species) %>%
+  #put genus and species in separate columns
+  separate(Genus_Species, c("genus", "species"), sep = "_", extra = "drop") %>%
+  #add tip labels with regular text
+  mutate(labels = as.factor(paste(genus, species, sep = " "))) %>%
+  #make hab column with adult habitat
+  mutate(hab = Adult.Habitat) %>%
+  #keep only columns we will use for plotting
+  select(tip, labels, cor_av, pglsres.cdmass, hab)
+# set row names in dataset to match the tip labels in the tree
+row.names(sal.phy) <- sal.phy$tip
+#check that phylogeny and data match exactly
+name.check(tree.hab, sal.phy)
+#resort  dataset to the order of tree tip labels
+sal.phy <- sal.phy[tree.hab$tip.label, ] 
+#labels
+labs <- sal.phy %>% select(tip, labels)
+```
+
+
+
+
 # Data
 
 First we import our tidied salamander morphology & trait binary dataset with the residuals of a cornea ~ cube root of mass PGLS as a column.
@@ -126,78 +258,7 @@ ggplotly(activityperiod.rel)
 
 ```
 
-# Development PGLS
 
-```{r}
-# Run development pgls--------
-#PGLS cornea diameter vs. cube root of mass + habitat
-pgls_dev <- pgls(log10(cor_av) ~ log10(rootmass_av) + Development,
-               data = sal.comp, 
-               lambda = "ML", #uses Maximum Likelihood estimate of lambda
-               param.CI = 0.95)
-#diagnostic plots
-par(mar = c(4,4,2,2))
-par(mfrow = c(2, 2))
-plot(pgls_dev)
-par(mfrow = c(1, 1))
-#Likelihood plot for Pagel's lambda. Solid red line indicates estimate for lambda and broken red lines indcaite the 95% confidence interval
-lambda.dev <- pgls.profile(pgls_dev, "lambda")
-plot(lambda.dev)
-#main effects
-anova(pgls_dev)
-#print model output 
-summary(pgls_dev)
-
-
-```
-
-# Development Plot
-
-```{r}
-#see what the levels of development are named
-levels(as.factor(sal.res.2$Development))
-
-#define a colorblind-friendly vector of colors for adult habitat
-col_dev <- c("direct development" = "chartreuse3",
-             "metamorphosizing" = "steelblue3",
-             "paedomorphic" = "slateblue1")
-
-#now you can see that each habitat is assigned a hex color when you look at the vector
-col_dev
-
-#make a vector of point shapes for adult habitat
-shape_dev <- c("direct development" = 25,
-             "metamorphosizing" = 24,
-             "paedomorphic" = 23)
-
-#see that each state has a shape now
-shape_dev
-```
-
-```{r}
-#boxplot of pgls residuals vs. development (relative eye size)
-development.rel <- ggplot(data = filter(sal.res.2, !is.na(Development)), aes(x = reorder(Development, pglsres.cdmass, fun=mean), y=pglsres.cdmass, fill=Development, shape=Development)) +
-  geom_boxplot(notch = FALSE, outlier.shape = NA, alpha=0.5) +
-  stat_summary(fun.y = mean, colour="black", geom="point", size=3, show_guide = FALSE) +
-  geom_jitter(aes(text = Genus_Species, shape = Development), size = 1.3, alpha = 0.3, position = position_jitter(0.15)) +
-  theme(text = element_text(size=14), panel.background = element_blank(), axis.line = element_line(colour = "black")) +
-  theme(axis.text = element_text(angle = 0, size = 9)) +
-  ylab("Relative cornea size") +
-  xlab("Development Mode") +
-  theme(legend.position = "none") +
-# use our custom colors for habitat
-  scale_fill_manual(values = col_dev, name = "Development") +
-# use our custom shapes for points
-  scale_shape_manual(values = shape_dev, name = "Development") 
-
-#print plot
-development.rel
-
-#look at the plot with the plotly package - you can hover over data points to see what each species is, great way to check outliers!
-library(plotly)
-ggplotly(development.rel)
-
-```
 
 # Color  figures with pallettes in the frog paper
 
@@ -445,30 +506,7 @@ dev.off()
 ```
 
 
-```{r}
-#boxplot of pgls residuals vs. development (relative eye size)
-development.rel <- ggplot(data = filter(sal.res.2, !is.na(Development)), aes(x = reorder(Development, pglsres.cdmass, fun=mean), y=pglsres.cdmass, fill=Development, shape=Development)) +
-  geom_boxplot(notch = FALSE, outlier.shape = NA, alpha=0.5) +
-  stat_summary(fun.y = mean, colour="black", geom="point", size=3, show_guide = FALSE) +
-  geom_jitter(aes(text = Genus_Species, shape = Development), size = 1.3, alpha = 0.3, position = position_jitter(0.15)) +
-  theme(text = element_text(size=14), panel.background = element_blank(), axis.line = element_line(colour = "black")) +
-  theme(axis.text = element_text(angle = 0, size = 9)) +
-  ylab("Relative cornea size") +
-  xlab("Development Mode") +
-  theme(legend.position = "none") +
-# use our custom colors for habitat
-  scale_fill_manual(values = col_dev, name = "Development") +
-# use our custom shapes for points
-  scale_shape_manual(values = shape_dev, name = "Development") 
 
-#print plot
-development.rel
-
-#look at the plot with the plotly package - you can hover over data points to see what each species is, great way to check outliers!
-library(plotly)
-ggplotly(development.rel)
-
-```
 ```{r}
 #see what the levels of pupil shape are named
 levels(as.factor(sal.res.2$Pupils))
@@ -491,28 +529,6 @@ shape_pupil <- c("horizontal_oval" = 25,
 #see that each state has a shape now
 shape_pupil
 ```
-
-#boxplot of pgls residuals vs. development (relative eye size)
-development.rel <- ggplot(data = filter(sal.res.2, !is.na(Development)), aes(x = reorder(Development, pglsres.cdmass, fun=mean), y=pglsres.cdmass, fill=Development, shape=Development)) +
-  geom_boxplot(notch = FALSE, outlier.shape = NA, alpha=0.5) +
-  stat_summary(fun.y = mean, colour="black", geom="point", size=3, show_guide = FALSE) +
-  geom_jitter(aes(text = Genus_Species, shape = Development), size = 1.3, alpha = 0.3, position = position_jitter(0.15)) +
-  theme(text = element_text(size=14), panel.background = element_blank(), axis.line = element_line(colour = "black")) +
-  theme(axis.text = element_text(angle = 0, size = 9)) +
-  ylab("Relative cornea size") +
-  xlab("Development Mode") +
-  theme(legend.position = "none") +
-# use our custom colors for habitat
-  scale_fill_manual(values = col_dev, name = "Development") +
-# use our custom shapes for points
-  scale_shape_manual(values = shape_dev, name = "Development") 
-
-#print plot
-development.rel
-
-#look at the plot with the plotly package - you can hover over data points to see what each species is, great way to check outliers!
-library(plotly)
-ggplotly(development.rel)
 
 
 ```{r}
@@ -559,31 +575,4 @@ pup.hab
 library(plotly)
 ggplotly(pup.hab)
 
-```
-
-```{r}
-#Development by pupil shape
-pup.dev <- ggplot(data = filter(sal.res.2, !is.na(Pupils)), aes(x=Development, fill=Pupils)) +
-  geom_bar(position="dodge") + 
-  theme(text = element_text(size=14), panel.background = element_blank(), axis.line = element_line(colour = "black")) +
-  theme(axis.text = element_text(angle = 0, size = 9)) +
-  ylab("count") +
-  xlab("Development") +
-  theme(legend.position = "right") +
-# use our custom colors for pupils
-  scale_fill_manual(values = col_pupil, name = "Pupil shape") 
-
-#print plot
-pup.dev
-
-#look at the plot with the plotly package - you can hover over data points to see what each species is, great way to check outliers!
-library(plotly)
-ggplotly(pup.dev)
-
-```
-
-```{r}
-chisq.test(sal.res.2$Adult.Habitat, sal.res.2$Pupils, correct=FALSE)
-
-chisq.test(sal.res.2$Development, sal.res.2$Pupils, correct=FALSE)
 ```

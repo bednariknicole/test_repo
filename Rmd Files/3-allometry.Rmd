@@ -22,7 +22,6 @@ library(ape)
 library(evobiR)
 library(geiger)
 library(caper)
-library(phytools)
 library(phylotools)
 library(plotly)
 library(kableExtra)
@@ -393,6 +392,9 @@ scale_color_manual(values = col_hab, name = "Adult habitat") +
 
 #interactive plot
 ggplotly(plot_pgls.cdmass)
+
+#export plot to pdf - you can change the export dimensions by changing the height and width numbers to make it fit well on your poster!
+ggsave("../Plots/pgls.cdmass.allometry.pdf", plot = plot_pgls.cdmass, device = "pdf")
 ```
 
 ### PGLS of log cornea diameter vs. log snout-vent length 
@@ -441,6 +443,8 @@ scale_color_manual(values = col_hab, name = "Adult habitat") +
 
 #interactive plot
 ggplotly(plot_pgls.cdsvl)
+
+ggsave("../Plots/pgls.cdsvl.allometry.pdf", plot = plot_pgls.cdsvl, device = "pdf")
 ```
 
 ### PGLS of log snout-vent length vs. log cube root of mass

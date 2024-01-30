@@ -27,7 +27,7 @@ library(plotly)
 library(kableExtra)
 library(gridExtra)
 library(ggimage)
-#library(ggtree)
+library(ggtree)
 library(grid)
 library(gtable)
 library(cowplot)
@@ -124,6 +124,9 @@ pglsres.cdmass$rn <- NULL
 #Merging datasets
 pglsres.cdmass.all <- merge(av.sal, pglsres.cdmass, by = "Genus_Species")
 
+# Export tidied dataset for analyses
+write.csv(pglsres.cdmass.all, file = "../Data/Tidy/pglsres.cdmass.all.csv")
+
 ```
 
 ```{r}
@@ -153,6 +156,9 @@ pglsres.edmass$rn <- NULL
 
 #Merging datasets
 pglsres.edmass.all <- merge(av.sal, pglsres.edmass, by = "Genus_Species")
+
+# Export tidied dataset for analyses
+write.csv(pglsres.edmass.all, file = "../Data/Tidy/pglsres.edmass.all.csv")
 ```
 
 ```{r}
@@ -182,6 +188,9 @@ pglsres.cdsvl$rn <- NULL
 
 #Merging datasets
 pglsres.cdsvl.all <- merge(av.sal, pglsres.cdsvl, by = "Genus_Species")
+
+# Export tidied dataset for analyses
+write.csv(pglsres.cdsvl.all, file = "../Data/Tidy/pglsres.cdsvl.all.csv")
 ```
 
 ```{r}
@@ -211,6 +220,9 @@ pglsres.edsvl$rn <- NULL
 
 #Merging datasets
 pglsres.edsvl.all <- merge(av.sal, pglsres.edsvl, by = "Genus_Species")
+
+# Export tidied dataset for analyses
+write.csv(pglsres.edsvl.all, file = "../Data/Tidy/pglsres.edsvl.all.csv")
 ```
 
 ## Phylogenetic distribution of absolute and relative eye size
@@ -221,11 +233,11 @@ We then plotted absolute eye size and relative eye investment (represented by th
 
 # colorblind-friendly color vectors -------
 # create vector of colors for adult habitat
-col_hab <- c("aquatic" = "#0072B2",
-             "scansorial" = "#009E73",
-             "semiaquatic" = "#56B4E9",
-             "subfossorial" = "#CC79A7",
-             "terrestrial" = "#E69F00")
+col_hab <- c("Aquatic" = "#0072B2",
+             "Scansorial" = "#009E73",
+             "Semiaquatic" = "#56B4E9",
+             "Subfossorial" = "#CC79A7",
+             "Terrestrial" = "#E69F00")
 
 #create vector of colors for activity period
 col_act <- c("both" = "deeppink3",
@@ -256,16 +268,16 @@ sal.bars.cdmass <- pglsres.cdmass.all %>%
 row.names(sal.bars.cdmass) <- sal.bars.cdmass$tip
 
 #drop phylogeny tips not in dataset
-tree_cdmass <- drop.tip(caudatatree, caudatatree$tip.label[!(caudatatree$tip.label %in% sal.bars.cdmass$tip)])
+#tree_cdmass <- drop.tip(caudatatree, caudatatree$tip.label[!(caudatatree$tip.label %in% sal.bars.cdmass$tip)])
 
 #ladderize tree
-tree_cdmass <- ladderize(tree_cdmass)
+caudatatree <- ladderize(caudatatree)
 
 #check that phylogeny and data match exactly
-name.check(tree_cdmass, sal.bars.cdmass)
+name.check(caudatatree, sal.bars.cdmass)
 
 #resort trait dataset to the order of tree tip labels
-sal.bars.cdmass <- sal.bars.cdmass[tree_cdmass$tip.label, ] 
+sal.bars.cdmass <- sal.bars.cdmass[caudatatree$tip.label, ] 
 
 #make trait vector for absolute cornea size
 abscor <- as.vector(sal.bars.cdmass$abscor) 
@@ -283,11 +295,17 @@ habs.cdmass <- as.vector(sal.bars.cdmass$hab)
 #make vector of colors corresponding to phylogeny tips
 tipcols.hab <- unname(col_hab[habs.cdmass]) 
 
+# Make the phylogeny plot
+p <- ggtree(caudatatree) %<+% labs + 
+     geom_tiplab(size = 3, aes(label = labels), fontface = 3) + 
+   xlim_tree(375) + 
+   coord_cartesian(clip = 'off') 
+
 
 # Phylogeny with absolute cornea diameters -----
 
 #plot tree with cornea size bars and tip labels
-plotTree.wBars(tree_cdmass, abscor, 
+plotTree.wBars(caudatatree, abscor, 
                scale = 0.04, 
                tip.labels = TRUE, 
                offset = 0.35,
@@ -301,11 +319,10 @@ legend(x = "left", legend = c("Aquatic", "Subfossorial", "Terrestrial", "Scansor
 # Phylogeny with relative eye size (compared to mass) -------
 
 #plot tree with relative eye size bars
-plotTree.wBars(tree_cdmass, inv.mass, 
+plotTree.wBars(caudatatree, inv.mass, 
                scale = 0.7, 
-               tip.labels = FALSE, 
+               tip.labels = TRUE, 
                col = tipcols.hab,
-               plot = FALSE, 
+               plot = TRUE, 
                add = TRUE)
-
 ```

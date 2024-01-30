@@ -24,6 +24,7 @@ library(gtable)
 library(cowplot)
 library(knitr)
 library(tidyverse)
+library(plotly)
 # Markdown settings
 knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE, fig.height = 4.5, fig.width=8)
 ```
@@ -33,589 +34,279 @@ knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE, fig.height 
 First we import our tidied salamander morphology & trait binary dataset with the residuals of a cornea ~ cube root of mass PGLS as a column.
 
 ```{r load-data}
-# Import tidied salamander eye size and trait data
-sal.res <- data.frame(read.csv("../Data/Tidy/salamanders_residuals_binary.csv", header=TRUE, na.strings=c("", "NA", " ","<1")))
-sal.res.2 <- data.frame(read.csv("../Data/Tidy/salamanders_residuals_updated.csv", header=TRUE, na.strings=c("", "NA", " ", "<1")))
+# Import tidied salamander eye siz, investment, and trait data
+pglsres.cdmass.all <- data.frame(read.csv("../Data/Tidy/pglsres.cdmass.all.csv", header=TRUE, na.strings=c("", "NA", " ","<1")))
+pglsres.edmass.all <- data.frame(read.csv("../Data/Tidy/pglsres.edmass.all.csv", header=TRUE, na.strings=c("", "NA", " ","<1")))
+pglsres.cdsvl.all <- data.frame(read.csv("../Data/Tidy/pglsres.cdsvl.all.csv", header=TRUE, na.strings=c("", "NA", " ","<1")))
+pglsres.edsvl.all <- data.frame(read.csv("../Data/Tidy/pglsres.edsvl.all.csv", header=TRUE, na.strings=c("", "NA", " ","<1")))
 # Quick look at data structure
-str(sal.res)
-str(sal.res.2)
-sal.res <- sal.res[-c(35:460)]
-```
-#Plots
-
-Next, we make boxplots of how eye size and relative eye size (represented by the PGLS residuals)compare across salamander ecological traits.
-
-##Aquatic
-
-```{r}
-#boxplot of cornea diameter vs aquatic ecology
-aquatic.abs <- ggplot(data = filter(sal.res, !is.na(Aquatic)), aes(x = Aquatic, y = cor_av)) +
-  geom_boxplot(notch = FALSE, outlier.shape = NA) +
-  stat_summary(fun.y = mean, colour="black", geom="point", 
-               shape=18, size=3, show_guide = FALSE) +
-  geom_jitter(aes(text = Genus_Species), 
-              shape = 19, size = 1.3, alpha = 0.3, position = position_jitter(0.15)) +
-  theme(text = element_text(size=14), panel.background = element_blank(), axis.line = element_line(colour = "black")) +
-  theme(axis.text = element_text(angle = 0, size = 9)) +
-  ylab("Mean cornea diameter (mm)") +
-  xlab("Aquatic ecology") +
-  theme(legend.position = "none")
-#print plot
-aquatic.abs
-```
-```{r}
-#boxplot of pgls residuals vs. aquatic ecology (relative eye size)
-aquatic.rel <- ggplot(data = filter(sal.res, !is.na(Aquatic)), aes(x = Aquatic, y = pglsres.cdmass)) +
-  geom_boxplot(notch = FALSE, outlier.shape = NA) +
-  stat_summary(fun.y = mean, colour="black", geom="point", 
-               shape=18, size=3, show_guide = FALSE) +
-  geom_jitter(aes(text = Genus_Species), 
-              shape = 19, size = 1.3, alpha = 0.3, position = position_jitter(0.15)) +
-  theme(text = element_text(size=14), panel.background = element_blank(), axis.line = element_line(colour = "black")) +
-  theme(axis.text = element_text(angle = 0, size = 9)) +
-  ylab("Relative cornea diameter (PGLS residuals)") +
-  xlab("Aquatic ecology") +
-  theme(legend.position = "none")
-#print plot
-aquatic.rel
+str(pglsres.cdmass.all)
+str(pglsres.edmass.all)
+str(pglsres.cdsvl.all)
+str(pglsres.edsvl.all)
 ```
 
-##Semiaquatic
-```{r}
-#boxplot of cornea diameter vs semiaquatic ecology
-semiaquatic.abs <- ggplot(data = filter(sal.res, !is.na(Semiaquatic)), aes(x = Semiaquatic, y = cor_av)) +
-  geom_boxplot(notch = FALSE, outlier.shape = NA) +
-  stat_summary(fun.y = mean, colour="black", geom="point", 
-               shape=18, size=3, show_guide = FALSE) +
-  geom_jitter(aes(text = Genus_Species), 
-              shape = 19, size = 1.3, alpha = 0.3, position = position_jitter(0.15)) +
-  theme(text = element_text(size=14), panel.background = element_blank(), axis.line = element_line(colour = "black")) +
-  theme(axis.text = element_text(angle = 0, size = 9)) +
-  ylab("Mean cornea diameter (mm)") +
-  xlab("Semiaquatic ecology") +
-  theme(legend.position = "none")
-#print plot
-semiaquatic.abs
-```
-```{r}
-#boxplot of pgls residuals vs. semiaquatic ecology (relative eye size)
-semiaquatic.rel <- ggplot(data = filter(sal.res, !is.na(Semiaquatic)), aes(x = Semiaquatic, y = pglsres.cdmass)) +
-  geom_boxplot(notch = FALSE, outlier.shape = NA) +
-  stat_summary(fun.y = mean, colour="black", geom="point", 
-               shape=18, size=3, show_guide = FALSE) +
-  geom_jitter(aes(text = Genus_Species), 
-              shape = 19, size = 1.3, alpha = 0.3, position = position_jitter(0.15)) +
-  theme(text = element_text(size=14), panel.background = element_blank(), axis.line = element_line(colour = "black")) +
-  theme(axis.text = element_text(angle = 0, size = 9)) +
-  ylab("Relative cornea diameter (PGLS residuals)") +
-  xlab("Semiaquatic ecology") +
-  theme(legend.position = "none")
-#print plot
-semiaquatic.rel
-```
+Next, we make boxplots of how eye size and relative eye size (represented by the PGLS residuals) compare across salamander ecological traits.
 
-##Terrestrial
-```{r}
-#boxplot of cornea diameter vs terrestrial ecology
-terrestrial.abs <- ggplot(data = filter(sal.res, !is.na(Terrestrial)), aes(x = Terrestrial, y = cor_av)) +
-  geom_boxplot(notch = FALSE, outlier.shape = NA) +
-  stat_summary(fun.y = mean, colour="black", geom="point", 
-               shape=18, size=3, show_guide = FALSE) +
-  geom_jitter(aes(text = Genus_Species), 
-              shape = 19, size = 1.3, alpha = 0.3, position = position_jitter(0.15)) +
-  theme(text = element_text(size=14), panel.background = element_blank(), axis.line = element_line(colour = "black")) +
-  theme(axis.text = element_text(angle = 0, size = 9)) +
-  ylab("Mean cornea diameter (mm)") +
-  xlab("Terrestrial ecology") +
-  theme(legend.position = "none")
-#print plot
-terrestrial.abs
-```
+```{r trait-boxplots}
 
-```{r}
-#boxplot of pgls residuals vs. terrestrial ecology (relative eye size)
-terrestrial.rel <- ggplot(data = filter(sal.res, !is.na(Terrestrial)), aes(x = Terrestrial, y = pglsres.cdmass)) +
-  geom_boxplot(notch = FALSE, outlier.shape = NA) +
-  stat_summary(fun.y = mean, colour="black", geom="point", 
-               shape=18, size=3, show_guide = FALSE) +
-  geom_jitter(aes(text = Genus_Species), 
-              shape = 19, size = 1.3, alpha = 0.3, position = position_jitter(0.15)) +
-  theme(text = element_text(size=14), panel.background = element_blank(), axis.line = element_line(colour = "black")) +
-  theme(axis.text = element_text(angle = 0, size = 9)) +
-  ylab("Relative cornea diameter (PGLS residuals)") +
-  xlab("Terrestrial ecology") +
-  theme(legend.position = "none")
-#print plot
-terrestrial.rel
-```
-
-##Scansorial
-```{r}
-#boxplot of cornea diameter vs scansorial ecology
-scansorial.abs <- ggplot(data = filter(sal.res, !is.na(Scansorial)), aes(x = Scansorial, y = cor_av)) +
-  geom_boxplot(notch = FALSE, outlier.shape = NA) +
-  stat_summary(fun.y = mean, colour="black", geom="point", 
-               shape=18, size=3, show_guide = FALSE) +
-  geom_jitter(aes(text = Genus_Species), 
-              shape = 19, size = 1.3, alpha = 0.3, position = position_jitter(0.15)) +
-  theme(text = element_text(size=14), panel.background = element_blank(), axis.line = element_line(colour = "black")) +
-  theme(axis.text = element_text(angle = 0, size = 9)) +
-  ylab("Mean cornea diameter (mm)") +
-  xlab("Scansorial ecology") +
-  theme(legend.position = "none")
-#print plot
-scansorial.abs
-```
-
-```{r}
-#boxplot of pgls residuals vs. scansorial ecology (relative eye size)
-scansorial.rel <- ggplot(data = filter(sal.res, !is.na(Scansorial)), aes(x = Scansorial, y = pglsres.cdmass)) +
-  geom_boxplot(notch = FALSE, outlier.shape = NA) +
-  stat_summary(fun.y = mean, colour="black", geom="point", 
-               shape=18, size=3, show_guide = FALSE) +
-  geom_jitter(aes(text = Genus_Species), 
-              shape = 19, size = 1.3, alpha = 0.3, position = position_jitter(0.15)) +
-  theme(text = element_text(size=14), panel.background = element_blank(), axis.line = element_line(colour = "black")) +
-  theme(axis.text = element_text(angle = 0, size = 9)) +
-  ylab("Relative cornea diameter (PGLS residuals)") +
-  xlab("Scansorial ecology") +
-  theme(legend.position = "none")
-#print plot
-scansorial.rel
-```
-
-
-##Subfossorial
-```{r}
-#boxplot of cornea diameter vs subfossorial ecology
-subfossorial.abs <- ggplot(data = filter(sal.res, !is.na(Subfossorial)), aes(x = Subfossorial, y = cor_av)) +
-  geom_boxplot(notch = FALSE, outlier.shape = NA) +
-  stat_summary(fun.y = mean, colour="black", geom="point", 
-               shape=18, size=3, show_guide = FALSE) +
-  geom_jitter(aes(text = Genus_Species), 
-              shape = 19, size = 1.3, alpha = 0.3, position = position_jitter(0.15)) +
-  theme(text = element_text(size=14), panel.background = element_blank(), axis.line = element_line(colour = "black")) +
-  theme(axis.text = element_text(angle = 0, size = 9)) +
-  ylab("Mean cornea diameter (mm)") +
-  xlab("Subfossorial ecology") +
-  theme(legend.position = "none")
-#print plot
-subfossorial.abs
-```
-
-```{r}
-#boxplot of pgls residuals vs. subfossorial ecology (relative eye size)
-subfossorial.rel <- ggplot(data = filter(sal.res, !is.na(Subfossorial)), aes(x = Subfossorial, y = pglsres.cdmass)) +
-  geom_boxplot(notch = FALSE, outlier.shape = NA) +
-  stat_summary(fun.y = mean, colour="black", geom="point", 
-               shape=18, size=3, show_guide = FALSE) +
-  geom_jitter(aes(text = Genus_Species), 
-              shape = 19, size = 1.3, alpha = 0.3, position = position_jitter(0.15)) +
-  theme(text = element_text(size=14), panel.background = element_blank(), axis.line = element_line(colour = "black")) +
-  theme(axis.text = element_text(angle = 0, size = 9)) +
-  ylab("Relative cornea diameter (PGLS residuals)") +
-  xlab("Subfossorial ecology") +
-  theme(legend.position = "none")
-#print plot
-subfossorial.rel
-```
-
-##Cave_dwelling
-```{r}
-#boxplot of cornea diameter vs cave dwelling ecology
-cave_dwelling.abs <- ggplot(data = filter(sal.res, !is.na(Cave_dwelling)), aes(x = Cave_dwelling, y = cor_av)) +
-  geom_boxplot(notch = FALSE, outlier.shape = NA) +
-  stat_summary(fun.y = mean, colour="black", geom="point", 
-               shape=18, size=3, show_guide = FALSE) +
-  geom_jitter(aes(text = Genus_Species), 
-              shape = 19, size = 1.3, alpha = 0.3, position = position_jitter(0.15)) +
-  theme(text = element_text(size=14), panel.background = element_blank(), axis.line = element_line(colour = "black")) +
-  theme(axis.text = element_text(angle = 0, size = 9)) +
-  ylab("Mean cornea diameter (mm)") +
-  xlab("Cave dwelling ecology") +
-  theme(legend.position = "none")
-#print plot
-cave_dwelling.abs
-```
-
-```{r}
-#boxplot of pgls residuals vs. cave dwelling ecology (relative eye size)
-cave_dwelling.rel <- ggplot(data = filter(sal.res, !is.na(Cave_dwelling)), aes(x = Cave_dwelling, y = pglsres.cdmass)) +
-  geom_boxplot(notch = FALSE, outlier.shape = NA) +
-  stat_summary(fun.y = mean, colour="black", geom="point", 
-               shape=18, size=3, show_guide = FALSE) +
-  geom_jitter(aes(text = Genus_Species), 
-              shape = 19, size = 1.3, alpha = 0.3, position = position_jitter(0.15)) +
-  theme(text = element_text(size=14), panel.background = element_blank(), axis.line = element_line(colour = "black")) +
-  theme(axis.text = element_text(angle = 0, size = 9)) +
-  ylab("Relative cornea diameter (PGLS residuals)") +
-  xlab("Cave dwelling ecology") +
-  theme(legend.position = "none")
-#print plot
-cave_dwelling.rel
-```
-
-##Eye size and investment across adult habitats
-```{r}
-#boxplot of cornea diameter vs adult habitat
-adult_habitat.abs <- ggplot(data = filter(sal.res.2, !is.na(Adult.Habitat)), aes(x = Adult.Habitat, y = cor_av, col=Adult.Habitat)) +
-  geom_boxplot(notch = FALSE, outlier.shape = NA) +
-  stat_summary(fun.y = mean, geom="point", 
-               shape=18, size=3, show_guide = FALSE) +
-  geom_jitter(aes(text = Genus_Species), 
-              shape = 19, size = 1.3, alpha = 0.3, position = position_jitter(0.15)) +
-  theme(text = element_text(size=14), panel.background = element_blank(), axis.line = element_line(colour = "black")) +
-  theme(axis.text = element_text(angle = 0, size = 9)) +
-  ylab("Mean cornea diameter (mm)") +
-  xlab("Adult Habitat") +
-  theme(legend.position = "none")
-#print plot
-adult_habitat.abs
-```
-```{r}
-#boxplot of pgls residuals vs. adult habitat (relative eye size)
-adult_habitat.rel <- ggplot(data = filter(sal.res.2, !is.na(Adult.Habitat)), aes(x = Adult.Habitat, y = pglsres.cdmass, col=Adult.Habitat)) +
-  geom_boxplot(notch = FALSE, outlier.shape = NA) +
-  stat_summary(fun.y = mean, colour="black", geom="point", 
-               shape=18, size=3, show_guide = FALSE) +
-  geom_jitter(aes(text = Genus_Species), 
-              shape = 19, size = 1.3, alpha = 0.3, position = position_jitter(0.15)) +
-  theme(text = element_text(size=14), panel.background = element_blank(), axis.line = element_line(colour = "black")) +
-  theme(axis.text = element_text(angle = 0, size = 9)) +
-  ylab("Relative cornea diameter (PGLS residuals)") +
-  xlab("Adult Habitat") +
-  theme(legend.position = "none")
-#print plot
-adult_habitat.rel
-```
-
-##Eye size and investment relationship with development type
-
-```{r}
-#boxplot of cornea diameter vs development
-development.abs <- ggplot(data = filter(sal.res.2, !is.na(Development)), aes(x = Development, y = cor_av, col=Development)) +
-  geom_boxplot(notch = FALSE, outlier.shape = NA) +
-  stat_summary(fun.y = mean, geom="point", 
-               shape=18, size=3, show_guide = FALSE) +
-  geom_jitter(aes(text = Genus_Species), 
-              shape = 19, size = 1.3, alpha = 0.3, position = position_jitter(0.15)) +
-  theme(text = element_text(size=14), panel.background = element_blank(), axis.line = element_line(colour = "black")) +
-  theme(axis.text = element_text(angle = 0, size = 9)) +
-  ylab("Mean cornea diameter (mm)") +
-  xlab("Development") +
-  theme(legend.position = "none")
-#print plot
-development.abs
-```
-
-```{r}
-#boxplot of pgls residuals vs. development (relative eye size)
-development.rel <- ggplot(data = filter(sal.res.2, !is.na(Development)), aes(x = Development, y = pglsres.cdmass, col=Development)) +
-  geom_boxplot(notch = FALSE, outlier.shape = NA) +
-  stat_summary(fun.y = mean, colour="black", geom="point", 
-               shape=18, size=3, show_guide = FALSE) +
-  geom_jitter(aes(text = Genus_Species), 
-              shape = 19, size = 1.3, alpha = 0.3, position = position_jitter(0.15)) +
-  theme(text = element_text(size=14), panel.background = element_blank(), axis.line = element_line(colour = "black")) +
-  theme(axis.text = element_text(angle = 0, size = 9)) +
-  ylab("Relative cornea diameter (PGLS residuals)") +
-  xlab("Development") +
-  theme(legend.position = "none")
-#print plot
-development.rel
-```
-
-# Paedomorphic
-
-```{r}
-#boxplot of pgls residuals vs. paedomorphic status (relative eye size)
-paedomorphic.rel <- ggplot(data = filter(sal.res, !is.na(Paedomorphic)), aes(x = Paedomorphic, y = pglsres.cdmass, col=Paedomorphic)) +
-  geom_boxplot(notch = FALSE, outlier.shape = NA) +
-  stat_summary(fun.y = mean, colour="black", geom="point", 
-               shape=18, size=3, show_guide = FALSE) +
-  geom_jitter(aes(text = Genus_Species), 
-              shape = 19, size = 1.3, alpha = 0.3, position = position_jitter(0.15)) +
-  theme(text = element_text(size=14), panel.background = element_blank(), axis.line = element_line(colour = "black")) +
-  theme(axis.text = element_text(angle = 0, size = 9)) +
-  ylab("Relative cornea diameter (PGLS residuals)") +
-  xlab("Paedomorphic") +
-  theme(legend.position = "none")
-#print plot
-paedomorphic.rel
-```
-
-```{r}
-#Filter aquatic species from dataset
-sal.res.3 <- filter(sal.res.2, Adult.Habitat == "aquatic")
-
-# Prep data and tree for analysis------
-#Make row names of dataset the species names (so it will match phylogeny tips)
-rownames(sal.res.3) <- sal.res.3$Genus_Species
-#check that names match in dataframe and tree
-name.check(phy = caudatatree, data = sal.res.3)
-drops1 <- name.check(phy = caudatatree, data = sal.res.3)
-#drop the blind salamander from the phylogeny for plots
-tree.hab1 <- drop.tip(caudatatree, drops1$tree_not_data)
-#use caper function to combine phylogeny and data into one object (this function also matches species names in tree and dataset)
-sal.comp1 <- comparative.data(phy = tree.hab1, data = sal.res.3, 
-                            names.col = Genus_Species, vcv = TRUE, 
-                            na.omit = FALSE, warn.dropped = TRUE)
-#check for dropped tips or dropped species
-sal.comp1$dropped$tips #phylogeny
-sal.comp1$dropped$unmatched.rows #dataset
-# Run paedomorphosis pgls--------
-#PGLS cornea diameter vs. cube root of mass + development mode
-pgls_aq <- pgls(log10(cor_av) ~ log10(rootmass_av) + Development,
-               data = sal.comp1, 
-               lambda = "ML", #uses Maximum Likelihood estimate of lambda
-               param.CI = 0.95)
-#diagnostic plots
-par(mar = c(4,4,2,2))
-par(mfrow = c(2, 2))
-plot(pgls_aq)
-par(mfrow = c(1, 1))
-#Likelihood plot for Pagel's lambda. Solid red line indicates estimate for lambda and broken red lines indcaite the 95% confidence interval
-lambda.aq <- pgls.profile(pgls_aq, "lambda")
-plot(lambda.aq)
-#main effects
-anova(pgls_aq)
-#print model output 
-summary(pgls_aq)
-```
-
-
-```{r}
-#see what the levels of development are named
-levels(as.factor(sal.res.3$Development))
-#define a colorblind-friendly vector of colors for adult habitat
-col_aq <- c("metamorphosizing" = "#0072B2",
-             "paedomorphic" = "#009E73")
-#now you can see that each habitat is assigned a hex color when you look at the vector
-col_aq
-#make a vector of point shapes for adult habitat
-shape_aq <- c("metamorphosizing" = 25,
-             "paedomorphic" = 24)
-#see that each state has a shape now
-shape_aq
-```
-
-```{r}
-#boxplot of pgls residuals vs. development (relative eye size)
-aquatic.rel <- ggplot(data = filter(sal.res.3, !is.na(Development)), aes(x = reorder(Development, pglsres.cdmass, fun = mean), y = pglsres.cdmass, fill=Development, shape = Development)) +
-  geom_boxplot(notch = FALSE, outlier.shape = NA, alpha = 0.5) +
-  stat_summary(fun.y = mean, colour="black", geom="point", size=3, show_guide = FALSE) +
-  geom_jitter(aes(text = Genus_Species, shape = Development),  size = 1.3, alpha = 0.3, col = "black", fill = "black", position = position_jitter(0.15)) +
-  theme(text = element_text(size=14), panel.background = element_blank(), axis.line = element_line(colour = "black")) +
-  theme(axis.text = element_text(angle = 0, size = 9)) +
-  ylab("Relative cornea size") +
-  xlab("Development Mode") +
-  theme(legend.position = "none") +
-# use our custom colors for habitat
-  scale_fill_manual(values = col_aq, name = "Development") +
-# use our custom shapes for points
-  scale_shape_manual(values = shape_aq, name = "Development")
-#print plot
-aquatic.rel
-#look at the plot with the plotly package - you can hover over data points to see what each species is, great way to check outliers!
-library(plotly)
-ggplotly(aquatic.rel)
-#export plot to pdf - you can change the export dimensions by changing the height and width numbers to make it fit well on your poster!
-pdf(file = "boxplots.pdf", height=4, width=6)
-aquatic.rel
-dev.off()
-```
-# Ecology statistics
-
-The habitat category looks the most interesting to me, so here we run a PGLS for eye-body allometry with habitat as a covariate to see if habitat has an effect on relative eye size in salamanders. 
-
-```{r}
-# Prep data and tree for analysis------
-#import phylogeny
-caudatatree <- read.nexus("../Data/Tidy/caudata-tree.nex")
-#Make row names of dataset the species names (so it will match phylogeny tips)
-rownames(sal.res.2) <- sal.res.2$Genus_Species
-#check that names match in dataframe and tree
-name.check(phy = caudatatree, data = sal.res.2)
-drops <- name.check(phy = caudatatree, data = sal.res.2)
-#drop the blind salamander from the phylogeny for plots
-tree.hab <- drop.tip(caudatatree, drops$tree_not_data)
-#use caper function to combine phylogeny and data into one object (this function also matches species names in tree and dataset)
-sal.comp <- comparative.data(phy = tree.hab, data = sal.res.2, 
-                            names.col = Genus_Species, vcv = TRUE, 
-                            na.omit = FALSE, warn.dropped = TRUE)
-#check for dropped tips or dropped species
-sal.comp$dropped$tips #phylogeny
-sal.comp$dropped$unmatched.rows #dataset
-
-#???levels((sal.comp$Adult.Habitat))???
-
-# Run habitat pgls--------
-#PGLS cornea diameter vs. cube root of mass + habitat
-pgls_hab <- pgls(log10(cor_av) ~ log10(rootmass_av) + Adult.Habitat,
-               data = sal.comp, 
-               lambda = "ML", #uses Maximum Likelihood estimate of lambda
-               param.CI = 0.95)
-#diagnostic plots
-par(mar = c(4,4,2,2))
-par(mfrow = c(2, 2))
-plot(pgls_hab)
-par(mfrow = c(1, 1))
-#Likelihood plot for Pagel's lambda. Solid red line indicates estimate for lambda and broken red lines indcaite the 95% confidence interval
-lambda.hab <- pgls.profile(pgls_hab, "lambda")
-plot(lambda.hab)
-#main effects
-anova(pgls_hab)
-#print model output 
-summary(pgls_hab)
-```
-Now we reorder the factor levels.
-```{r}
-#Display factor levels for adult habitat
-levels(sal.comp$Adult.Habitat)
-#Reorder factor levels for adult habitat
-sal.comp$Adult.Habitat <- factor(sal.comp$Adult.Habitat, levels=c('terrestrial', 'aquatic', 'scansorial', 'semiaquatic', 'subfossorial'))
-
-# Run habitat pgls--------
-#PGLS cornea diameter vs. cube root of mass + habitat
-pgls_hab <- pgls(log10(cor_av) ~ log10(rootmass_av) + Adult.Habitat,
-               data = sal.comp, 
-               lambda = "ML", #uses Maximum Likelihood estimate of lambda
-               param.CI = 0.95)
-#diagnostic plots
-par(mar = c(4,4,2,2))
-par(mfrow = c(2, 2))
-plot(pgls_hab)
-par(mfrow = c(1, 1))
-#Likelihood plot for Pagel's lambda. Solid red line indicates estimate for lambda and broken red lines indcaite the 95% confidence interval
-lambda.hab <- pgls.profile(pgls_hab, "lambda")
-plot(lambda.hab)
-#main effects
-anova(pgls_hab)
-#print model output 
-summary(pgls_hab)
-
-
-```
-
-# Color  figures with pallettes in the frog paper
-
-Here I will just re-run the code to make the figures you want for your poster, with a custom color pallette so that the habitat categories will be the same for all of them. 
-
-First we define what we want that color pallette to be:
-
-```{r}
-#see what the levels of adult habitat are named
-levels(as.factor(sal.res.2$Adult.Habitat))
-#define a colorblind-friendly vector of colors for adult habitat
+# colorblind-friendly color vectors -------
+# create vector of colors for adult habitat
 col_hab <- c("aquatic" = "#0072B2",
              "scansorial" = "#009E73",
              "semiaquatic" = "#56B4E9",
              "subfossorial" = "#CC79A7",
              "terrestrial" = "#E69F00")
-#now you can see that each habitat is assigned a hex color when you look at the vector
-col_hab
-#make a vector of point shapes for adult habitat
-shape_hab <- c("aquatic" = 25,
-             "scansorial" = 24,
-             "semiaquatic" = 22,
-             "subfossorial" = 21,
-             "terrestrial" = 23)
-#see that each state has a shape now
-shape_hab
+
+#create vector of colors for activity period
+col_act <- c("both" = "deeppink3",
+             "diurnal" = "darkgoldenrod1", 
+             "nocturnal" = "blueviolet")
+
+# create vector of colors for larval habitat
+col_larv <- c("Lentic water" = "royalblue1", 
+         "Lotic water" = "skyblue1",
+         "No larvae" = "lightcoral",
+         "Obscured" = "darkslateblue",
+         "On land" = "lightpink4")
+
 ```
 
-## Boxplot adult habitat figure
+Next, we make boxplots of how eye size and relative eye size (represented by the PGLS residuals) compare across salamander ecological traits.
 
-You've already made a nice boxplot of adult habitats and relative eye size, so now we can just modify that plot to make it nicer, ordered sensibly, and colored how we want. 
+##Aquatic
 
 ```{r}
-#boxplot of pgls residuals vs. adult habitat (relative eye size)
-adult_habitat.rel <- ggplot(data = filter(sal.res.2, !is.na(Adult.Habitat)), aes(x = reorder(Adult.Habitat, pglsres.cdmass, fun = mean), y = pglsres.cdmass, fill=Adult.Habitat, shape = Adult.Habitat)) +
-  geom_boxplot(notch = FALSE, outlier.shape = NA, alpha = 0.5) +
-  stat_summary(fun.y = mean, colour="black", geom="point", size=3, show_guide = FALSE) +
-  geom_jitter(aes(text = Genus_Species, shape = Adult.Habitat),  size = 1.3, alpha = 0.3, col = "black", fill = "black", position = position_jitter(0.15)) +
+# Group habitat type into binary categories used by Huang et al.
+pglsres.cdmass.all$Habitat_Group <- ifelse(pglsres.cdmass.all$Adult_Habitat %in% c("aquatic", "semiaquatic"), "Aq/S", "T/Ar")
+# Group habitat type into binary categories used by Huang et al.
+pglsres.cdsvl.all$Habitat_Group <- ifelse(pglsres.cdsvl.all$Adult_Habitat %in% c("aquatic", "semiaquatic"), "Aq/S", "T/Ar")
+# Group habitat type into binary categories used by Huang et al.
+pglsres.edmass.all$Habitat_Group <- ifelse(pglsres.edmass.all$Adult_Habitat %in% c("aquatic", "semiaquatic"), "Aq/S", "T/Ar")
+# Group habitat type into binary categories used by Huang et al.
+pglsres.edsvl.all$Habitat_Group <- ifelse(pglsres.edsvl.all$Adult_Habitat %in% c("aquatic", "semiaquatic"), "Aq/S", "T/Ar")
+
+# boxplot of cornea size vs adult habitat
+abscor.habitat <- ggplot(data=pglsres.cdmass.all, aes(x = Habitat_Group, y = cor_av)) +
+  geom_boxplot(notch = FALSE, outlier.shape = NA) +
+  stat_summary(fun.y = mean, colour="black", geom="point", 
+               shape=18, size=3, show_guide = FALSE) +
+  geom_jitter(aes(text = Genus_Species, color = Adult_Habitat), 
+              shape = 19, size = 1.3, alpha = 0.7, position = position_jitter(0.15)) +
   theme(text = element_text(size=14), panel.background = element_blank(), axis.line = element_line(colour = "black")) +
   theme(axis.text = element_text(angle = 0, size = 9)) +
-  ylab("Relative cornea size") +
-  xlab("Adult habitat") +
-  theme(legend.position = "none") +
-# use our custom colors for habitat
-  scale_fill_manual(values = col_hab, name = "Adult habitat") +
+  ylab("Cornea diameter (mm)") +
+  xlab("Binary habitat") +
+  scale_color_manual(values = col_hab) +  # Use the color vector for manual color coloring based on Adult_Habitat
+  theme(legend.position = "none")
+#print plot
+abscor.habitat
+
+pglsres.cdmass.all$Habitat_Group <- ifelse(pglsres.cdmass.all$Adult_Habitat %in% c("aquatic", "semiaquatic"), "Aq/S", "T/Ar")
+
+# boxplot of eye size vs adult habitat
+abseye.habitat <- ggplot(data=pglsres.cdmass.all, aes(x = Habitat_Group, y = eye_av)) +
+  geom_boxplot(notch = FALSE, outlier.shape = NA) +
+  stat_summary(fun.y = mean, colour="black", geom="point", 
+               shape=18, size=3, show_guide = FALSE) +
+  geom_jitter(aes(text = Genus_Species, color = Adult_Habitat), 
+              shape = 19, size = 1.3, alpha = 0.7, position = position_jitter(0.15)) +
+  theme(text = element_text(size=14), panel.background = element_blank(), axis.line = element_line(colour = "black")) +
+  theme(axis.text = element_text(angle = 0, size = 9)) +
+  ylab("Eye diameter (mm)") +
+  xlab("Binary habitat") +
+  scale_color_manual(values = col_hab) +  # Use the color vector for manual color coloring based on Adult_Habitat
+  theme(legend.position = "none")
+#print plot
+abseye.habitat
+
+# boxplot of cornea investment by mass vs adult habitat
+cdmass.habitat <- ggplot(data=pglsres.cdmass.all, aes(x = Habitat_Group, y = pglsres.cdmass)) +
+  geom_boxplot(notch = FALSE, outlier.shape = NA) +
+  stat_summary(fun.y = mean, colour="black", geom="point", 
+               shape=18, size=3, show_guide = FALSE) +
+  geom_jitter(aes(text = Genus_Species, color = Adult_Habitat), 
+              shape = 19, size = 1.3, alpha = 0.7, position = position_jitter(0.15)) +
+  theme(text = element_text(size=14), panel.background = element_blank(), axis.line = element_line(colour = "black")) +
+  theme(axis.text = element_text(angle = 0, size = 9)) +
+  ylab("Cornea investment (mass)") +
+  xlab("Binary habitat") +
+  scale_color_manual(values = col_hab) +  # Use the color vector for manual color coloring based on Adult_Habitat
+  theme(legend.position = "none")
+#print plot
+cdmass.habitat
+
+# boxplot of cornea investment by svl vs adult habitat
+cdsvl.habitat <- ggplot(data=pglsres.cdsvl.all, aes(x = Habitat_Group, y = pglsres.cdsvl)) +
+  geom_boxplot(notch = FALSE, outlier.shape = NA) +
+  stat_summary(fun.y = mean, colour="black", geom="point", 
+               shape=18, size=3, show_guide = FALSE) +
+  geom_jitter(aes(text = Genus_Species, color = Adult_Habitat), 
+              shape = 19, size = 1.3, alpha = 0.7, position = position_jitter(0.15)) +
+  theme(text = element_text(size=14), panel.background = element_blank(), axis.line = element_line(colour = "black")) +
+  theme(axis.text = element_text(angle = 0, size = 9)) +
+  ylab("Cornea investment (SVL)") +
+  xlab("Binary habitat") +
+  scale_color_manual(values = col_hab) +  # Use the color vector for manual color coloring based on Adult_Habitat
+  theme(legend.position = "none")
+#print plot
+cdsvl.habitat
+
+# boxplot of eye investment by mass vs adult habitat
+edmass.habitat <- ggplot(data=pglsres.edmass.all, aes(x = Habitat_Group, y = pglsres.edmass)) +
+  geom_boxplot(notch = FALSE, outlier.shape = NA) +
+  stat_summary(fun.y = mean, colour="black", geom="point", 
+               shape=18, size=3, show_guide = FALSE) +
+  geom_jitter(aes(text = Genus_Species, color = Adult_Habitat), 
+              shape = 19, size = 1.3, alpha = 0.7, position = position_jitter(0.15)) +
+  theme(text = element_text(size=14), panel.background = element_blank(), axis.line = element_line(colour = "black")) +
+  theme(axis.text = element_text(angle = 0, size = 9)) +
+  ylab("Eye investment (mass)") +
+  xlab("Binary habitat") +
+  scale_color_manual(values = col_hab) +  # Use the color vector for manual color coloring based on Adult_Habitat
+  theme(legend.position = "none")
+#print plot
+edmass.habitat
+
+# boxplot of eye investment by svl vs adult habitat
+edsvl.habitat <- ggplot(data=pglsres.edsvl.all, aes(x = Habitat_Group, y = pglsres.edsvl)) +
+  geom_boxplot(notch = FALSE, outlier.shape = NA) +
+  stat_summary(fun.y = mean, colour="black", geom="point", 
+               shape=18, size=3, show_guide = FALSE) +
+  geom_jitter(aes(text = Genus_Species, color = Adult_Habitat), 
+              shape = 19, size = 1.3, alpha = 0.7, position = position_jitter(0.15)) +
+  theme(text = element_text(size=14), panel.background = element_blank(), axis.line = element_line(colour = "black")) +
+  theme(axis.text = element_text(angle = 0, size = 9)) +
+  ylab("Eye investment (SVL)") +
+  xlab("Binary habitat") +
+  scale_color_manual(values = col_hab) +  # Use the color vector for manual color coloring based on Adult_Habitat
+  theme(legend.position = "none")
+#print plot
+edsvl.habitat
+
+# Export plot to pdf - you can change the export dimensions by changing the height and width numbers to make it fit well on your poster!
+ggsave("../Plots/binary.abscor.boxplot.pdf", plot = abscor.habitat, device = "pdf")
+ggsave("../Plots/binary.abseye.boxplot.pdf", plot = abseye.habitat, device = "pdf")
+ggsave("../Plots/binary.cdmass.boxplot.pdf", plot = cdmass.habitat, device = "pdf")
+ggsave("../Plots/binary.cdsvl.boxplot.pdf", plot = cdsvl.habitat, device = "pdf")
+ggsave("../Plots/binary.edmass.boxplot.pdf", plot = edmass.habitat, device = "pdf")
+ggsave("../Plots/binary.edsvl.boxplot.pdf", plot = edsvl.habitat, device = "pdf")
+
+```
+
+Next we will create boxplots comparing eye and cornea size/investment and the ecological traits. 
+
+##Eye size and investment across adult habitats
+```{r}
+# Boxplot of cornea diameter vs adult habitat
+adult_habitat.abs <- ggplot(data = filter(pglsres.cdmass.all, !is.na(Adult_Habitat)), 
+                             aes(x = reorder(Adult_Habitat, cor_av, FUN = mean), y = cor_av)) +
+  geom_boxplot(notch = FALSE, outlier.shape = NA, alpha = 0.5) +
+  stat_summary(fun.y = mean, color = "black", geom = "point", 
+               shape = 18, size = 3, show_guide = FALSE) +
+  geom_jitter(aes(text = Genus_Species, shape = Adult_Habitat, color = Adult_Habitat), 
+              shape = 19, size = 2, alpha = 0.5, position = position_jitter(0.15)) +
+  theme(text = element_text(size = 14), panel.background = element_blank(), 
+        axis.line = element_line(colour = "black")) +
+  theme(axis.text = element_text(angle = 0, size = 9)) +
+  scale_color_manual(values = col_hab) +  # Use the color vector for manual color coloring based on Adult_Habitat
+  ylab("Mean cornea diameter (mm)") +
+  xlab("Adult Habitat") +
+  theme(legend.position = "none")
+
 # use our custom shapes for points
-  scale_shape_manual(values = shape_hab, name = "Adult habitat")
-#print plot
-#adult_habitat.rel
-#look at the plot with the plotly package - you can hover over data points to see what each species is, great way to check outliers!
-library(plotly)
-ggplotly(adult_habitat.rel)
-#export plot to pdf - you can change the export dimensions by changing the height and width numbers to make it fit well on your poster!
-pdf(file = "boxplots.pdf", height=4, width=6)
-adult_habitat.rel
-dev.off()
+  #scale_shape_manual(values = shape_hab, name = "Adult habitat")
+
+# Boxplot of cornea investment (by mass) vs adult habitat
+adult_habitat.inv <- ggplot(data = filter(pglsres.cdmass.all, !is.na(Adult_Habitat)), 
+                             aes(x = reorder(Adult_Habitat, pglsres.cdmass, FUN = mean), y = pglsres.cdmass)) +
+  geom_boxplot(notch = FALSE, outlier.shape = NA, alpha = 0.5) +
+  stat_summary(fun.y = mean, color = "black", geom = "point", 
+               shape = 18, size = 3, show_guide = FALSE) +
+  geom_jitter(aes(text = Genus_Species, color = Adult_Habitat), 
+              shape = 19, size = 2, alpha = 0.5, position = position_jitter(0.15)) +
+  theme(text = element_text(size = 14), panel.background = element_blank(), 
+        axis.line = element_line(colour = "black")) +
+  theme(axis.text = element_text(angle = 0, size = 9)) +
+  scale_color_manual(values = col_hab) +  # Use the color vector for manual color coloring based on Adult_Habitat
+  ylab("Cornea investment (mass)") +
+  xlab("Adult Habitat") +
+  theme(legend.position = "none")
+
+# Boxplot of cornea investment (by SVL) vs adult habitat
+adult_habitat.invsvl <- ggplot(data = filter(pglsres.cdsvl.all, !is.na(Adult_Habitat)), 
+                             aes(x = reorder(Adult_Habitat, pglsres.cdsvl, FUN = mean), y = pglsres.cdsvl)) +
+  geom_boxplot(notch = FALSE, outlier.shape = NA, alpha = 0.5) +
+  stat_summary(fun.y = mean, color = "black", geom = "point", 
+               shape = 18, size = 3, show_guide = FALSE) +
+  geom_jitter(aes(text = Genus_Species, color = Adult_Habitat), 
+              shape = 19, size = 2, alpha = 0.5, position = position_jitter(0.15)) +
+  theme(text = element_text(size = 14), panel.background = element_blank(), 
+        axis.line = element_line(colour = "black")) +
+  theme(axis.text = element_text(angle = 0, size = 9)) +
+  scale_color_manual(values = col_hab) +  # Use the color vector for manual color coloring based on Adult_Habitat
+  ylab("Cornea investment (SVL)") +
+  xlab("Adult Habitat") +
+  theme(legend.position = "none")
+
+# Look at the plot with the plotly package - you can hover over data points to see what each species is, great way to check outliers!
+ggplotly(adult_habitat.abs)
+ggplotly(adult_habitat.inv)
+ggplotly(adult_habitat.invsvl)
+
+# Export plot to pdf - you can change the export dimensions by changing the height and width numbers to make it fit well on your poster!
+ggsave("../Plots/adulthabitat.abs.boxplot.pdf", plot = adult_habitat.abs, device = "pdf")
+ggsave("../Plots/adulthabitat.invmass.boxplot.pdf", plot = adult_habitat.inv, device = "pdf")
+ggsave("../Plots/adulthabitat.invsvl.boxplot.pdf", plot = adult_habitat.invsvl, device = "pdf")
 ```
-
-## Eye body scaling figure
-
-Here we re-make the allometry plot for cornea vs. body mass and color the points by adult habitat. 
+##Eye size and investment relationship of development status of aquatic species
 
 ```{r}
-#PGLS cornea diameter vs. cube root of mass
-pgls_cdmass <- pgls(log10(cor_av) ~ log10(rootmass_av),
-               data = sal.comp, 
-               lambda = "ML", #uses Maximum Likelihood estimate of lambda
-               param.CI = 0.95)
-#print model output 
-summary(pgls_cdmass)
-#plot
-cdmass.plot <- ggplot(data = sal.res.2, aes(x = rootmass_av, y = cor_av, col = Adult.Habitat, fill = Adult.Habitat, shape = Adult.Habitat, text = Genus_Species)) +
- geom_point(alpha = 0.7) +
-  #make x scale log10
-  scale_x_log10(name = "Cube root of mass (g)") +
-  #make y scale log10
-  scale_y_log10(name = "Cornea diameter (mm)") +
-  # use our custom colors for habitat
-  scale_color_manual(values = col_hab, name = "Adult habitat") +
-  scale_fill_manual(values = col_hab, name = "Adult habitat") +
-  # use our custom shapes for habitat
-  scale_shape_manual(values = shape_hab, name = "Adult habitat") +
-  theme_bw() +
-  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank()) +
-  geom_abline(slope = coef(pgls_cdmass)[[2]], intercept = coef(pgls_cdmass)[[1]]) 
-#print plot
-#cdmass.plot
-#interactive plot
-ggplotly(cdmass.plot)
-#export plot to pdf - you can change the export dimensions by changing the height and width numbers to make it fit well on your poster!
-pdf(file = "allometry.pdf", height=4, width=6)
-cdmass.plot
-dev.off()
-```
+# Filtering out only aquatic species into a new dataset
+aquatic_species <- pglsres.cdmass.all %>%
+  filter(Adult_Habitat == "aquatic")
+aquatic_species.svl <- pglsres.cdsvl.all %>%
+  filter(Adult_Habitat == "aquatic")
 
-## Phylogeny figures
+# Boxplot of pgls residuals by mass vs. paedomorphic/metamorphosizing status
+aquaticdevelopment <- ggplot(data = aquatic_species, aes(x = reorder(Development, pglsres.cdmass, FUN = mean), y = pglsres.cdmass)) +
+  geom_boxplot(notch = FALSE, outlier.shape = NA) +
+  stat_summary(fun.y = mean, color = "black", geom = "point", 
+               shape = 18, size = 3, show_guide = FALSE) +
+  geom_jitter(aes(text = Genus_Species, color = Adult_Habitat), 
+              shape = 19, size = 2, alpha = 0.7, position = position_jitter(0.15)) +
+  theme(text = element_text(size = 14), panel.background = element_blank(), 
+        axis.line = element_line(colour = "black")) +
+  theme(axis.text = element_text(angle = 0, size = 9)) +
+  scale_color_manual(values = col_hab) +  # Use the color vector for manual color coloring based on Adult_Habitat
+  ylab("Cornea investment (mass)") +
+  xlab("Adult Habitat") +
+  theme(legend.position = "none")
 
-Here we re-make the phylogeny figure, but color the bars for absolute and relative eye size by adult habitat to mirror the other figures for the poster
+# Print the plot
+print(aquaticdevelopment)
 
-```{r}
-#make dataframe for labeling phylogeny figure
-sal.phy <- sal.res.2 %>%
-  #make column labeling tip labels that match phylogeny
-  mutate(tip = Genus_Species) %>%
-  #put genus and species in separate columns
-  separate(Genus_Species, c("genus", "species"), sep = "_", extra = "drop") %>%
-  #add tip labels with regular text
-  mutate(labels = as.factor(paste(genus, species, sep = " "))) %>%
-  #make hab column with adult habitat
-  mutate(hab = Adult.Habitat) %>%
-  #keep only columns we will use for plotting
-  select(tip, labels, cor_av, pglsres.cdmass, hab)
-# set row names in dataset to match the tip labels in the tree
-row.names(sal.phy) <- sal.phy$tip
-#check that phylogeny and data match exactly
-name.check(tree.hab, sal.phy)
-#resort  dataset to the order of tree tip labels
-sal.phy <- sal.phy[tree.hab$tip.label, ] 
-#labels
-labs <- sal.phy %>% select(tip, labels)
+# Boxplot of pgls residuals by svl vs. paedomorphic/metamorphosizing status
+aquaticdevelopment.svl <- ggplot(data = aquatic_species.svl, aes(x = reorder(Development, pglsres.cdsvl, FUN = mean), y = pglsres.cdsvl)) +
+  geom_boxplot(notch = FALSE, outlier.shape = NA) +
+  stat_summary(fun.y = mean, color = "black", geom = "point", 
+               shape = 18, size = 3, show_guide = FALSE) +
+  geom_jitter(aes(text = Genus_Species, color = Adult_Habitat), 
+              shape = 19, size = 2, alpha = 0.7, position = position_jitter(0.15)) +
+  theme(text = element_text(size = 14), panel.background = element_blank(), 
+        axis.line = element_line(colour = "black")) +
+  theme(axis.text = element_text(angle = 0, size = 9)) +
+  scale_color_manual(values = col_hab) +  # Use the color vector for manual color coloring based on Adult_Habitat
+  ylab("Cornea investment (SVL)") +
+  xlab("Adult Habitat") +
+  theme(legend.position = "none")
+
+# Print the plot
+print(aquaticdevelopment.svl)
+
+# Export plot to pdf - you can change the export dimensions by changing the height and width numbers to make it fit well on your poster!
+ggsave("../Plots/aquaticdevelopment.boxplot.pdf", plot = aquaticdevelopment, device = "pdf")
+ggsave("../Plots/aquaticdevelopment.svl.boxplot.pdf", plot = aquaticdevelopment.svl, device = "pdf")
 ```
 
 Next, we use ggtree to plot the phylogeny alongside bar plots for absolute cornea diameter and relative conea size. 
