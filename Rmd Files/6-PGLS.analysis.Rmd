@@ -36,73 +36,30 @@ knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE, fig.height 
 First we import our tidied salamander morphology & trait binary dataset with the residuals of a cornea ~ cube root of mass PGLS as a column.
 
 ```{r load-data}
-
 # Import tidied salamander eye size and trait data
-sal.res <- data.frame(read.csv("../Data/Tidy/salamanders_residuals_binary3.csv", header=TRUE, na.strings=c("", "NA", " ","<1")))
-sal.res.2 <- data.frame(read.csv("../Data/Tidy/salamanders_residuals_updated.csv", header=TRUE, na.strings=c("", "NA", " ", "<1")))
-aquaticspecies <- data.frame(read.csv("../Data/Raw/aquaticspecies.csv", header=TRUE, na.strings=c("", "NA", " ", "<1")))
-caudatatree <- read.nexus("../Data/caudata-tree")
-
-#change activity period for sal.res2 to a binary nocturnal vs. not nocturnal
-sal.res.new <- sal.res.2 %>%
-  #make new column called activity2 and change "both" and "diurnal" to "non-nocturnal"
-  mutate(activity2 = recode(Activity.Period, "both" = "non-nocturnal", "diurnal" = "non-nocturnal", "nocturnal" = "nocturnal"))
-
+pglsres.cdmass.all <- data.frame(read.csv("../Data/Tidy/pglsres.cdmass.all.csv", header=TRUE, na.strings=c("", "NA", " ","<1")))
+caudatatree <- read.nexus("../Data/Tidy/caudata-tree.nex")
 
 # Quick look at data structure
-str(sal.res)
-str(sal.res.2)
+str(pglsres.cdmass.all)
 
-
+# Filtering out only aquatic species into a new dataset
+aquatic_species <- pglsres.cdmass.all %>%
+  filter(Adult_Habitat == "aquatic")
 
 #Make row names of dataset the species names (so it will match phylogeny tips)
-rownames(sal.res.2) <- sal.res.2$Genus_Species
-#rownames(aquaticspecies) <-aquaticspecies$Genus_Species
-rownames(sal.res.new) <- sal.res.new$Genus_Species
-rownames(sal.res) <- sal.res$Genus_Species
-
+rownames(pglsres.cdmass.all) <- pglsres.cdmass.all$Genus_Species
 
 #check that names match in dataframe and tree
-name.check(phy = caudatatree, data = sal.res.2)
-name.check(phy = caudatatree, data = sal.res.new)
-name.check(phy = caudatatree, data = sal.res)
-#name.check(phy = caudatatree, data = aquaticspecies)
-
-drops <- name.check(phy = caudatatree, data = sal.res.2)
-drops1 <- name.check(phy = caudatatree, data = sal.res.new)
-drops2 <- name.check(phy = caudatatree, data = sal.res)
-#drops2 <- name.check(phy = caudatatree, data = aquaticspecies)
-
-#drop the blind salamander from the phylogeny for plots
-tree.hab <- drop.tip(caudatatree, drops$tree_not_data)
-tree.act <- drop.tip(caudatatree, drops$tree_not_data)
-tree.pupil <- drop.tip(caudatatree, drops$tree_not_data)
-#tree.aq <- drop.tip(caudatatree, drops$tree_not_data)
+name.check(phy = caudatatree, data = pglsres.cdmass.all)
 
 #use caper function to combine phylogeny and data into one object (this function also matches species names in tree and dataset)
-
-#sal.res.2 <- factor(Larval.Habitat, levels=c("no larva", "lentic water", "lotic water", "both"))
-sal.comp <- comparative.data(phy = tree.hab, data = sal.res.2, 
+sal.comp <- comparative.data(phy = caudatatree, data = pglsres.cdmass.all, 
                             names.col = Genus_Species, vcv = TRUE, 
                             na.omit = FALSE, warn.dropped = TRUE)
-sal.comp.1 <- comparative.data(phy = tree.act, data = sal.res.new, 
-                            names.col = Genus_Species, vcv = TRUE, 
-                            na.omit = FALSE, warn.dropped = TRUE)
-sal.comp.2 <- comparative.data(phy = tree.pupil, data = sal.res, 
-                            names.col = Genus_Species, vcv = TRUE, 
-                            na.omit = FALSE, warn.dropped = TRUE)
-#sal.comp.2 <- comparative.data(phy = tree.aq, data = aquaticspecies,
-                            #names.col = Genus_Species, vcv = TRUE,
-                            #na.omit = FALSE, warn.dropped = TRUE)
-
-levels(factor(sal.res.2$Larval.Habitat))
-sal.res.2 <- ordered(sal.res.2$Larval.Habitat, levels=c("no larva", "lentic water", "lotic water", "both"))
 
 #check for dropped tips or dropped species
 sal.comp$dropped$tips #phylogeny
-sal.comp.1$dropped$tips #phylogeny
-#sal.comp.2$dropped$tips
-
 ```
 
 #Habitat PGLS
@@ -110,8 +67,8 @@ sal.comp.1$dropped$tips #phylogeny
 ```{r}
 # Run habitat pgls--------
 
-pgls_hab1 <- pgls(cor_av ~ Adult.Habitat,
-               data = sal.comp.1, 
+pgls_hab1 <- pgls(cor_av ~ Adult_Habitat,
+               data = sal.comp, 
                lambda = "ML", #uses Maximum Likelihood estimate of lambda
                param.CI = 0.95)
 
@@ -154,10 +111,12 @@ anova(pgls_hab1)
 summary(pgls_hab1)
 
 #PGLS cornea diameter vs. cube root of mass + habitat
-pgls_hab <- pgls(log10(cor_av) ~ log10(rootmass_av) + Adult.Habitat,
-               data = sal.comp.1, 
+pgls_hab <- pgls(log10(cor_av) ~ log10(rootmass_av) + Adult_Habitat,
+               data = sal.comp, 
                lambda = "ML", #uses Maximum Likelihood estimate of lambda
                param.CI = 0.95)
+anova(pgls_hab)
+summary(pgls_hab)
 
 #diagnostic plots
 par(mar = c(4,4,2,2))
