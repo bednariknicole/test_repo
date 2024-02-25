@@ -19,4 +19,9 @@ body mass. However, only the tree and legend are plotting. The absolute and rela
 I followed your code in anuran_eye_size_copy.rmd with some modifications, and I am not sure where I am going wrong.
 
 
+4.
 
+In rmd file 6-PGLS analyis I am unsure which method to use to get significance values for testing for differences in eye size across the ecological states. 
+I started by testing for normality,but since it is such a large sample size it is not surprising that the Shapiro Wilks test is picking up some deviation. 
+However, visually the histogram looks normally distributed. For the frog paper, you used the non-parametric alternative, Kruskal-Wallis tests. Could you look 
+at the assumptions tests starting at line 78 and see if it makes more sense to do an ANOVA versus the Kruskal-Wallis or Tukey versus Pairwise Wilcox Rank Sum tests?
