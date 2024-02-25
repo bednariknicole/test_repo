@@ -39,13 +39,13 @@
 38,Caudata,Cryptobranchoidea,Hynobiidae,Hynobiinae,Hynobius,sonani,Hynobius_sonani,no,no,yes,no,no,no,NA,NA,no,yes,no,yes,no,no,yes,no,no
 39,Caudata,Cryptobranchoidea,Hynobiidae,Hynobiinae,Hynobius,tsuensis,Hynobius_tsuensis,no,no,yes,no,no,no,NA,NA,no,yes,no,yes,no,no,yes,no,no
 40,Caudata,Cryptobranchoidea,Hynobiidae,Hynobiinae,Liua,shihi,Liua_shihi,yes,no,no,no,no,no,NA,NA,no,yes,no,yes,no,no,yes,no,no
-41,Caudata,Cryptobranchoidea,Hynobiidae,Onychodactylinae,Onychodactylus,fischeri,Onychodactylus_fischeri,no,yes,no,no,no,no,yes,no,no,yes,no,yes,no,no,yes,no,no
+41,Caudata,Cryptobranchoidea,Hynobiidae,Onychodactylinae,Onychodactylus,fischeri,Onychodactylus_fischeri,no,no,yes,no,no,no,yes,no,no,yes,no,yes,no,no,yes,no,no
 42,Caudata,Cryptobranchoidea,Hynobiidae,Onychodactylinae,Onychodactylus,japonicus,Onychodactylus_japonicus,no,no,yes,no,no,no,NA,NA,no,yes,no,yes,no,no,yes,no,no
 43,Caudata,Cryptobranchoidea,Hynobiidae,Hynobiinae,Pachyhynobius,shangchengensis,Pachyhynobius_shangchengensis,yes,no,no,no,no,no,yes,no,no,yes,no,yes,no,no,yes,no,no
 44,Caudata,Cryptobranchoidea,Hynobiidae,Hynobiinae,Paradactylodon,mustersi,Paradactylodon_mustersi,yes,no,no,no,no,no,NA,NA,no,yes,no,yes,no,no,yes,no,no
-45,Caudata,Cryptobranchoidea,Hynobiidae,Hynobiinae,Ranodon,sibiricus,Ranodon_sibiricus,yes,no,no,no,no,no,yes,no,no,yes,no,yes,no,no,yes,no,no
-46,Caudata,Cryptobranchoidea,Hynobiidae,Hynobiinae,Salamandrella,keyserlingii,Salamandrella_keyserlingii,no,yes,no,no,no,no,yes,no,no,yes,no,yes,no,yes,no,no,no
-47,Caudata,Salamandroidea,Plethodontidae,Plethodontinae,Aneides,aeneus,Aneides_aeneus,no,no,yes,no,no,no,yes,no,no,no,yes,no,yes,no,no,no,yes
+45,Caudata,Cryptobranchoidea,Hynobiidae,Hynobiinae,Ranodon,sibiricus,Ranodon_sibiricus,no,yes,no,no,no,no,yes,no,no,yes,no,yes,no,no,yes,no,no
+46,Caudata,Cryptobranchoidea,Hynobiidae,Hynobiinae,Salamandrella,keyserlingii,Salamandrella_keyserlingii,no,no,yes,no,no,no,yes,no,no,yes,no,yes,no,yes,no,no,no
+47,Caudata,Salamandroidea,Plethodontidae,Plethodontinae,Aneides,aeneus,Aneides_aeneus,no,no,no,yes,no,no,yes,no,no,no,yes,no,yes,no,no,no,yes
 48,Caudata,Salamandroidea,Plethodontidae,Plethodontinae,Aneides,ferreus,Aneides_ferreus,no,no,no,yes,no,no,yes,no,no,no,yes,no,yes,no,no,no,yes
 49,Caudata,Salamandroidea,Plethodontidae,Plethodontinae,Aneides,flavipunctatus,Aneides_flavipunctatus,no,no,yes,no,no,no,yes,no,no,no,yes,no,yes,no,no,no,yes
 50,Caudata,Salamandroidea,Plethodontidae,Plethodontinae,Aneides,hardii,Aneides_hardii,no,no,no,no,yes,no,yes,no,no,no,yes,no,yes,no,no,no,yes
@@ -74,7 +74,7 @@
 73,Caudata,Salamandroidea,Plethodontidae,Plethodontinae,Desmognathus,conanti,Desmognathus_conanti,no,yes,no,no,no,no,yes,no,no,yes,no,yes,no,no,yes,no,no
 74,Caudata,Salamandroidea,Plethodontidae,Plethodontinae,Desmognathus,fuscus,Desmognathus_fuscus,no,yes,no,no,no,no,yes,no,no,yes,no,yes,no,no,yes,no,no
 75,Caudata,Salamandroidea,Plethodontidae,Plethodontinae,Desmognathus,imitator,Desmognathus_imitator,no,yes,no,no,no,no,yes,no,no,yes,no,yes,no,no,yes,no,no
-76,Caudata,Salamandroidea,Plethodontidae,Plethodontinae,Desmognathus,monticola,Desmognathus_monticola,no,no,yes,no,no,no,yes,no,no,yes,no,yes,no,no,yes,no,no
+76,Caudata,Salamandroidea,Plethodontidae,Plethodontinae,Desmognathus,monticola,Desmognathus_monticola,no,yes,no,no,no,no,yes,no,no,yes,no,yes,no,no,yes,no,no
 77,Caudata,Salamandroidea,Plethodontidae,Plethodontinae,Desmognathus,ochrophaeus,Desmognathus_ochrophaeus,no,yes,no,no,no,no,yes,no,no,yes,no,yes,no,no,yes,no,no
 78,Caudata,Salamandroidea,Plethodontidae,Plethodontinae,Desmognathus,quadramaculatus,Desmognathus_quadramaculatus,no,yes,no,no,no,no,yes,no,no,yes,no,yes,no,no,yes,no,no
 79,Caudata,Salamandroidea,Plethodontidae,Plethodontinae,Ensatina,eschscholtzii,Ensatina_eschscholtzii,no,no,yes,no,no,no,yes,no,no,no,yes,no,yes,no,no,no,yes
@@ -139,7 +139,7 @@
 138,Caudata,Salamandroidea,Salamandridae,Pleurodelinae,Pachytriton,brevipes,Pachytriton_brevipes,yes,no,no,no,no,no,yes,no,no,yes,no,yes,no,no,yes,no,no
 139,Caudata,Salamandroidea,Salamandridae,Pleurodelinae,Paramesotriton,deloustali,Paramesotriton_deloustali,yes,no,no,no,no,no,NA,NA,no,yes,no,yes,no,no,no,yes,no
 140,Caudata,Salamandroidea,Salamandridae,Pleurodelinae,Paramesotriton,hongkongensis,Paramesotriton_hongkongensis,no,no,yes,no,no,no,yes,no,no,yes,no,yes,no,no,no,yes,no
-141,Caudata,Salamandroidea,Salamandridae,Pleurodelinae,Pleurodeles,poireti,Pleurodeles_poireti,no,no,yes,no,no,no,NA,NA,no,yes,no,yes,no,yes,no,no,no
+141,Caudata,Salamandroidea,Salamandridae,Pleurodelinae,Pleurodeles,poireti,Pleurodeles_poireti,no,yes,no,no,no,no,NA,NA,no,yes,no,yes,no,yes,no,no,no
 142,Caudata,Salamandroidea,Salamandridae,Pleurodelinae,Pleurodeles,waltl,Pleurodeles_waltl,no,yes,no,no,no,no,yes,no,no,yes,no,yes,no,yes,no,no,no
 143,Caudata,Salamandroidea,Salamandridae,Pleurodelinae,Pleurodeles,waltl_gilled,Pleurodeles_waltl_gilled,yes,no,no,no,no,no,yes,no,yes,no,no,yes,no,yes,no,no,no
 144,Caudata,Salamandroidea,Salamandridae,Salamandrinae,Salamandra,atra,Salamandra_atra,no,no,yes,no,no,no,yes,no,no,no,yes,no,yes,no,no,no,yes

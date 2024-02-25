@@ -39,13 +39,13 @@
 38,Caudata,Cryptobranchoidea,Hynobiidae,Hynobiinae,Hynobius,sonani,Hynobius_sonani,NA,terrestrial,metamorphosizing,free-living,lotic water
 39,Caudata,Cryptobranchoidea,Hynobiidae,Hynobiinae,Hynobius,tsuensis,Hynobius_tsuensis,NA,terrestrial,metamorphosizing,free-living,lotic water
 40,Caudata,Cryptobranchoidea,Hynobiidae,Hynobiinae,Liua,shihi,Liua_shihi,NA,aquatic,metamorphosizing,free-living,lotic water
-41,Caudata,Cryptobranchoidea,Hynobiidae,Onychodactylinae,Onychodactylus,fischeri,Onychodactylus_fischeri,nocturnal,semiaquatic,metamorphosizing,free-living,lotic water
+41,Caudata,Cryptobranchoidea,Hynobiidae,Onychodactylinae,Onychodactylus,fischeri,Onychodactylus_fischeri,nocturnal,terrestrial,metamorphosizing,free-living,lotic water
 42,Caudata,Cryptobranchoidea,Hynobiidae,Onychodactylinae,Onychodactylus,japonicus,Onychodactylus_japonicus,NA,terrestrial,metamorphosizing,free-living,lotic water
 43,Caudata,Cryptobranchoidea,Hynobiidae,Hynobiinae,Pachyhynobius,shangchengensis,Pachyhynobius_shangchengensis,nocturnal,aquatic,metamorphosizing,free-living,lotic water
 44,Caudata,Cryptobranchoidea,Hynobiidae,Hynobiinae,Paradactylodon,mustersi,Paradactylodon_mustersi,NA,aquatic,metamorphosizing,free-living,lentic water
-45,Caudata,Cryptobranchoidea,Hynobiidae,Hynobiinae,Ranodon,sibiricus,Ranodon_sibiricus,nocturnal,aquatic,metamorphosizing,free-living,lotic water
-46,Caudata,Cryptobranchoidea,Hynobiidae,Hynobiinae,Salamandrella,keyserlingii,Salamandrella_keyserlingii,nocturnal,semiaquatic,metamorphosizing,free-living,lentic water
-47,Caudata,Salamandroidea,Plethodontidae,Plethodontinae,Aneides,aeneus,Aneides_aeneus,nocturnal,terrestrial,direct development,no free-living,no larva
+45,Caudata,Cryptobranchoidea,Hynobiidae,Hynobiinae,Ranodon,sibiricus,Ranodon_sibiricus,nocturnal,semiaquatic,metamorphosizing,free-living,lotic water
+46,Caudata,Cryptobranchoidea,Hynobiidae,Hynobiinae,Salamandrella,keyserlingii,Salamandrella_keyserlingii,nocturnal,terrestrial,metamorphosizing,free-living,lentic water
+47,Caudata,Salamandroidea,Plethodontidae,Plethodontinae,Aneides,aeneus,Aneides_aeneus,nocturnal,scansorial,direct development,no free-living,no larva
 48,Caudata,Salamandroidea,Plethodontidae,Plethodontinae,Aneides,ferreus,Aneides_ferreus,nocturnal,scansorial,direct development,no free-living,no larva
 49,Caudata,Salamandroidea,Plethodontidae,Plethodontinae,Aneides,flavipunctatus,Aneides_flavipunctatus,nocturnal,terrestrial,direct development,no free-living,no larva
 50,Caudata,Salamandroidea,Plethodontidae,Plethodontinae,Aneides,hardii,Aneides_hardii,nocturnal,subfossorial,direct development,no free-living,no larva
@@ -74,7 +74,7 @@
 73,Caudata,Salamandroidea,Plethodontidae,Plethodontinae,Desmognathus,conanti,Desmognathus_conanti,nocturnal,semiaquatic,metamorphosizing,free-living,lotic water
 74,Caudata,Salamandroidea,Plethodontidae,Plethodontinae,Desmognathus,fuscus,Desmognathus_fuscus,nocturnal,semiaquatic,metamorphosizing,free-living,lotic water
 75,Caudata,Salamandroidea,Plethodontidae,Plethodontinae,Desmognathus,imitator,Desmognathus_imitator,nocturnal,semiaquatic,metamorphosizing,free-living,lotic water
-76,Caudata,Salamandroidea,Plethodontidae,Plethodontinae,Desmognathus,monticola,Desmognathus_monticola,nocturnal,terrestrial,metamorphosizing,free-living,lotic water
+76,Caudata,Salamandroidea,Plethodontidae,Plethodontinae,Desmognathus,monticola,Desmognathus_monticola,nocturnal,semiaquatic,metamorphosizing,free-living,lotic water
 77,Caudata,Salamandroidea,Plethodontidae,Plethodontinae,Desmognathus,ochrophaeus,Desmognathus_ochrophaeus,nocturnal,semiaquatic,metamorphosizing,free-living,lotic water
 78,Caudata,Salamandroidea,Plethodontidae,Plethodontinae,Desmognathus,quadramaculatus,Desmognathus_quadramaculatus,nocturnal,semiaquatic,metamorphosizing,free-living,lotic water
 79,Caudata,Salamandroidea,Plethodontidae,Plethodontinae,Ensatina,eschscholtzii,Ensatina_eschscholtzii,nocturnal,terrestrial,direct development,no free-living,no larva
