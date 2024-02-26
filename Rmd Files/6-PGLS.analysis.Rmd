@@ -115,6 +115,8 @@ Data for eye size and investment across ecological groups were not normally dist
 
 When the Kruskal-Wallis test indicated that means differed across ecological groups and there were more than two groups, we used post-hoc Pairwise Wilcoxen Rank Sum Tests to caluclate pairwise comparisons between group levels with corrections for mulitple testing. This is a non-parametric alternative to a Tukey test that uses ranks to test for differences in means.
 
+^^what was done in anuran paper. do above, or just a linear regression with residuals versus adult habitat and then run anova?
+
 ```{r}
 # Test for differences in mean (absolute) eye size across habitat groups: Kruskal-Wallis test
 kruskal.test(eye_av ~ Adult_Habitat, data = pglsres.cdmass.all) 

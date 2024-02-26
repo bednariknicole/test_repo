@@ -45,6 +45,10 @@ str(pglsres.cdmass.all)
 str(pglsres.edmass.all)
 str(pglsres.cdsvl.all)
 str(pglsres.edsvl.all)
+
+# Exponentiate PGLS residuals for plots and put in new dataframe
+pglsres.cdmass.all.exp <- pglsres.cdmass.all %>%
+  mutate(pglsres.cdmass = 10^pglsres.cdmass)
 ```
 
 Next, we make boxplots of how eye size and relative eye size (represented by the PGLS residuals) compare across salamander ecological traits.
@@ -203,7 +207,7 @@ Next we will create boxplots comparing eye and cornea size/investment and the ec
 ##Cornea size and investment across adult habitats
 ```{r}
 # Boxplot of cornea diameter vs adult habitat
-adult_habitat.abs <- ggplot(data = filter(pglsres.cdmass.all, !is.na(Adult_Habitat)), 
+adult_habitat.abs <- ggplot(data = filter(pglsres.cdmass.all.exp, !is.na(Adult_Habitat)), 
                              aes(x = reorder(Adult_Habitat, cor_av, FUN = mean), y = cor_av)) +
   geom_boxplot(notch = FALSE, outlier.shape = NA, alpha = 0.5) +
   stat_summary(fun.y = mean, color = "black", geom = "point", 
@@ -222,7 +226,7 @@ adult_habitat.abs <- ggplot(data = filter(pglsres.cdmass.all, !is.na(Adult_Habit
   #scale_shape_manual(values = shape_hab, name = "Adult habitat")
 
 # Boxplot of cornea investment (by mass) vs adult habitat
-adult_habitat.inv <- ggplot(data = filter(pglsres.cdmass.all, !is.na(Adult_Habitat)), 
+adult_habitat.inv <- ggplot(data = filter(pglsres.cdmass.all.exp, !is.na(Adult_Habitat)), 
                              aes(x = reorder(Adult_Habitat, pglsres.cdmass, FUN = mean), y = pglsres.cdmass)) +
   geom_boxplot(notch = FALSE, outlier.shape = NA, alpha = 0.5) +
   stat_summary(fun.y = mean, color = "black", geom = "point", 
@@ -268,7 +272,7 @@ ggsave("../Plots/adulthabitat.invsvl.boxplot.pdf", plot = adult_habitat.invsvl, 
 
 ```{r}
 # Boxplot of cornea diameter vs activity period
-activity_period.abs <- ggplot(data = filter(pglsres.cdmass.all, !is.na(Activity_Period)), 
+activity_period.abs <- ggplot(data = filter(pglsres.cdmass.all.exp, !is.na(Activity_Period)), 
                              aes(x = reorder(Activity_Period, cor_av, FUN = mean), y = cor_av)) +
   geom_boxplot(notch = FALSE, outlier.shape = NA, alpha = 0.5) +
   stat_summary(fun.y = mean, color = "black", geom = "point", 
@@ -284,7 +288,7 @@ activity_period.abs <- ggplot(data = filter(pglsres.cdmass.all, !is.na(Activity_
   theme(legend.position = "none")
 
 # Boxplot of cornea investment (by mass) vs activity period
-activity_period.inv <- ggplot(data = filter(pglsres.cdmass.all, !is.na(Activity_Period)), 
+activity_period.inv <- ggplot(data = filter(pglsres.cdmass.all.exp, !is.na(Activity_Period)), 
                              aes(x = reorder(Activity_Period, pglsres.cdmass, FUN = mean), y = pglsres.cdmass)) +
   geom_boxplot(notch = FALSE, outlier.shape = NA, alpha = 0.5) +
   stat_summary(fun.y = mean, color = "black", geom = "point", 
@@ -330,7 +334,7 @@ ggsave("../Plots/activityperiod.invsvl.boxplot.pdf", plot = activity_period.invs
 
 ```{r}
 # Boxplot of cornea diameter vs larval habitat
-larval_habitat.abs <- ggplot(data = filter(pglsres.cdmass.all, !is.na(Larval_Habitat)), 
+larval_habitat.abs <- ggplot(data = filter(pglsres.cdmass.all.exp, !is.na(Larval_Habitat)), 
                              aes(x = reorder(Larval_Habitat, cor_av, FUN = mean), y = cor_av)) +
   geom_boxplot(notch = FALSE, outlier.shape = NA, alpha = 0.5) +
   stat_summary(fun.y = mean, color = "black", geom = "point", 
@@ -346,7 +350,7 @@ larval_habitat.abs <- ggplot(data = filter(pglsres.cdmass.all, !is.na(Larval_Hab
   theme(legend.position = "none")
 
 # Boxplot of cornea investment (by mass) vs larval habitat
-larval_habitat.inv <- ggplot(data = filter(pglsres.cdmass.all, !is.na(Larval_Habitat)), 
+larval_habitat.inv <- ggplot(data = filter(pglsres.cdmass.all.exp, !is.na(Larval_Habitat)), 
                              aes(x = reorder(Larval_Habitat, pglsres.cdmass, FUN = mean), y = pglsres.cdmass)) +
   geom_boxplot(notch = FALSE, outlier.shape = NA, alpha = 0.5) +
   stat_summary(fun.y = mean, color = "black", geom = "point", 
@@ -394,7 +398,7 @@ ggsave("../Plots/larvalhabitat.invsvl.boxplot.pdf", plot = larval_habitat.invsvl
 
 ```{r}
 # Filtering out only aquatic species into a new dataset
-aquatic_species <- pglsres.cdmass.all %>%
+aquatic_species <- pglsres.cdmass.all.exp %>%
   filter(Adult_Habitat == "aquatic")
 aquatic_species.svl <- pglsres.cdsvl.all %>%
   filter(Adult_Habitat == "aquatic")
