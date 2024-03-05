@@ -5,6 +5,11 @@ are showing up as NA values. This is the only species this is a problem for. Bef
 I am not sure what is happening here.
 
 
+>> This is a classic secret space in one of your levels, carried over from the original data sheet. If you run the code in the console "levels(as.factor(traits$subset$Genus_Species))" and scroll through your species names to Hynobius naevius, you can see that there is a space after the species name in your dataframe for traits ("Hynobius_naevius "). In your dataframe for eye data, there is no space ("Hynobius_naevius"), so these two levels are not matching up with each other (hence the NAs for your eye data species). If you delete the space in your data file, they should match! I deleted the space in the traits CSV on github, so this code all matches up now :)
+
+
+
+
 2. 
 
 In rmd file 3-allometry, lines 330-348, the PGLS fit line in the scatterplot is way off of the actual data points. Does this mean that the PGLS 
