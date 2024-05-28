@@ -1,0 +1,329 @@
+---
+title: "PGLS Analysis"
+author: "Nicole Bednarik & Katie Thomas"
+date: 28 May 2024
+output:
+  html_document:
+    theme: flatly
+    toc: TRUE
+    toc_float: TRUE
+    code_fold: show
+---
+
+```{r setup, include = FALSE}
+
+# Load package libraries
+library(plyr)
+library(geiger)
+library(caper)
+library(plotly)
+library(kableExtra)
+library(gridExtra)
+library(ggimage)
+library(grid)
+library(gtable)
+library(cowplot)
+library(knitr)
+library(tidyverse)
+
+# Markdown settings
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE, fig.height = 4.5, fig.width=8)
+```
+
+# Data
+
+First we import our tidied salamander morphology & trait dataset with the residuals of a cornea ~ cube root of mass PGLS as a column.
+
+```{r load-data}
+
+# Import tidied salamander eye size and trait data
+pglsres.cdmass.all <- data.frame(read.csv("../Data/Tidy/pglsres.cdmass.all.csv", header=TRUE, na.strings=c("", "NA", " ","<1")))
+
+# Import pruned phylogeny
+caudatatree <- read.nexus("../Data/Tidy/caudata-tree.nex")
+
+# Quick look at data structure
+str(pglsres.cdmass.all)
+
+# Filtering out only aquatic species into a new dataset
+aquatic_species <- pglsres.cdmass.all %>%
+  filter(Adult_Habitat == "aquatic")
+```
+
+We combine the phylogeny and tidied dataset into one comparative object to be used in ensuing PGLS analyses. This is also done separately for only aquatic species.
+
+```{r sal-comp, results = "hide"}
+
+# Make row names of dataset the species names (so it will match phylogeny tips)
+rownames(pglsres.cdmass.all) <- pglsres.cdmass.all$Genus_Species
+
+# Check that names match in dataframe and tree
+name.check(phy = caudatatree, data = pglsres.cdmass.all)
+
+# Reorder factor levels
+pglsres.cdmass.all$Activity_Period <- factor(pglsres.cdmass.all$Activity_Period, levels = c("nocturnal", "diurnal", "both"))
+pglsres.cdmass.all$Larval_Habitat <- factor(pglsres.cdmass.all$Larval_Habitat, levels = c("lentic water", "lotic water", "both", "no larva"))
+
+# Use caper function to combine phylogeny and data into one object (this function also matches species names in tree and dataset)
+sal.comp <- comparative.data(phy = caudatatree, data = pglsres.cdmass.all, names.col = Genus_Species, vcv = TRUE, na.omit = FALSE, warn.dropped = TRUE)
+aquatic.comp <- comparative.data(phy = caudatatree, data = aquatic_species, names.col = Genus_Species, vcv = TRUE, na.omit = FALSE, warn.dropped = TRUE)
+
+# Check for dropped tips or dropped species
+sal.comp$dropped$tips 
+aquatic.comp$dropped$tips
+```
+
+## Testing for differences in eye size across ecological states
+
+First we check if data for eye size and eye investment across ecological states is normally distributed. pglsres.cdmass is the variable for the cornea diameter ~ mass residuals.
+
+```{r}
+
+# Testing Assumptions
+
+# Create a QQ plot 
+qqnorm(pglsres.cdmass.all$eye_av)
+qqline(pglsres.cdmass.all$eye_av)
+# Histogram 
+hist(pglsres.cdmass.all$eye_av, main = "Histogram of Eye Size")
+# Check the normality 
+shapiro.test(pglsres.cdmass.all$eye_av)
+
+# Create a QQ plot 
+qqnorm(pglsres.cdmass.all$cor_av)
+qqline(pglsres.cdmass.all$cor_av)
+# Histogram 
+hist(pglsres.cdmass.all$cor_av, main = "Histogram of Cornea Size")
+# Check the normality
+shapiro.test(pglsres.cdmass.all$cor_av)
+
+# Create a QQ plot 
+qqnorm(pglsres.cdmass.all$rootmass_av)
+qqline(pglsres.cdmass.all$rootmass)
+# Histogram 
+hist(pglsres.cdmass.all$rootmass, main = "Histogram of Root Mass")
+# Check the normality 
+shapiro.test(pglsres.cdmass.all$rootmass)
+
+# Create a QQ plot 
+qqnorm(pglsres.cdmass.all$pglsres.cdmass)
+qqline(pglsres.cdmass.all$pglsres.cdmass)
+# Histogram 
+hist(pglsres.cdmass.all$pglsres.cdmass, main = "Histogram of cornea ~ mass residuals")
+# Check the normality 
+shapiro.test(pglsres.cdmass.all$pglsres.cdmass)
+
+# Levene's Test for homogeneity of variances across groups
+leveneTest(pglsres.cdmass.all$pglsres.cdmass ~ pglsres.cdmass.all$Adult_Habitat)
+```
+Data for eye size and investment across ecological groups were not normally distributed, so we used non-parametric statistical tests for comparing data between ecological groups. 
+
+??We used Kruskal-Wallis tests to test for differences in means across ecological groups, which is a non-parametric alternative to a one-way ANOVA test that uses ranks. 
+
+When the Kruskal-Wallis test indicated that means differed across ecological groups and there were more than two groups, we used post-hoc Pairwise Wilcoxen Rank Sum Tests to caluclate pairwise comparisons between group levels with corrections for mulitple testing. This is a non-parametric alternative to a Tukey test that uses ranks to test for differences in means.
+
+^^what was done in anuran paper. do above, or just a linear regression with residuals versus adult habitat and then run anova?
+
+# Habitat PGLS
+
+```{r}
+# Run habitat pgls--------
+
+pgls_hab1 <- pgls(cor_av ~ Adult_Habitat,
+               data = sal.comp, 
+               lambda = "ML", #uses Maximum Likelihood estimate of lambda
+               param.CI = 0.95)
+
+#main effects
+anova(pgls_hab1)
+
+#print model output 
+summary(pgls_hab1)
+
+#PGLS cornea diameter vs. cube root of mass + habitat
+pgls_hab <- pgls(log10(cor_av) ~ log10(rootmass_av) + Adult_Habitat,
+               data = sal.comp, 
+               lambda = "ML", #uses Maximum Likelihood estimate of lambda
+               param.CI = 0.95)
+
+#diagnostic plots
+par(mar = c(4,4,2,2))
+par(mfrow = c(2, 2))
+plot(pgls_hab)
+par(mfrow = c(1, 1))
+
+#Likelihood plot for Pagel's lambda. Solid red line indicates estimate for lambda and broken red lines indcaite the 95% confidence interval
+lambda.hab <- pgls.profile(pgls_hab, "lambda")
+plot(lambda.hab)
+
+#main effects
+anova(pgls_hab)
+
+#print model output 
+summary(pgls_hab)
+```
+
+## PGLS of eye scaling with body mass with habitat as covariate
+```{r}
+#run PGLS model for cornea diameter vs. cube root of mass using the Maximum Liklihood estimate of lambda
+pgls_hab2 <- pgls(log10(cor_av) ~ log10(rootmass_av) * Adult_Habitat, 
+               data = sal.comp, 
+               lambda = "ML", bounds = list(lambda = c(1e-05, 1)),
+               #uses Maximum Liklihood estimate of lambda
+               param.CI = 0.95)
+
+#evaluate model assumptions
+par(mfrow = c(2,2)) #makes your plot window into 2x2 panels
+plot(pgls_hab2) #plot the linear model
+par(mfrow = c(1,1)) #set plotting window back to one plot
+
+#significance of relationships
+kable(anova(pgls_hab2), digits = 3, caption= "ANOVA Table for cornea size ~ mass * habitat") %>%
+  kable_styling(full_width = F) %>%
+  collapse_rows(columns = 1, valign = "top")
+
+#intercept and slope
+summary(pgls_hab2)
+```
+# Kruskal Wallis Test for cornea investment vs. adult habitat 
+
+```{r}
+# Test for differences in mean (absolute) eye size across habitat groups: Kruskal-Wallis test
+kruskal.test(eye_av ~ Adult_Habitat, data = pglsres.cdmass.all) 
+
+# Mulitple comparisons for differences in mean (absolute) eye size across habitat groups: Pairwise Wilcoxon rank sum tests
+pairwise.wilcox.test(pglsres.cdmass.all$eye_av, pglsres.cdmass.all$Adult_Habitat, p.adjust.method = "bonferroni")
+
+# Test for differences relative eye size (by mass) across habitat groups: Kruskal-Wallis test
+kruskal.test(pglsres.cdmass ~ Adult_Habitat, data = pglsres.cdmass.all) 
+
+# Mulitple comparisons for differences in eye investment (by mass) across habitat groups: Pairwise Wilcoxon rank sum tests
+pairwise.wilcox.test(pglsres.cdmass.all$pglsres.cdmass, pglsres.cdmass.all$Adult_Habitat, p.adjust.method = "bonferroni")
+
+```
+
+# Linear Regression and ANOVA
+
+```{r}
+# linear regression model
+lm_adulthabitat <- lm(cor_av~ Adult_Habitat + rootmass_av, data = pglsres.cdmass.all)
+summary(lm_adulthabitat)
+anova(lm_adulthabitat)
+```
+
+# Activity Period PGLS
+
+```{r}
+# Run activity period pgls--------
+
+pgls_act1 <- pgls(cor_av ~ Activity_Period,
+               data = sal.comp, 
+               lambda = "ML", #uses Maximum Likelihood estimate of lambda
+               param.CI = 0.95)
+
+#main effects
+anova(pgls_act1)
+
+#print model output 
+summary(pgls_act1)
+
+#PGLS cornea diameter vs. cube root of mass + habitat
+pgls_act <- pgls(log10(cor_av) ~ log10(rootmass_av) + Activity_Period,
+               data = sal.comp, 
+               lambda = "ML", #uses Maximum Likelihood estimate of lambda
+               param.CI = 0.95)
+
+#diagnostic plots
+par(mar = c(4,4,2,2))
+par(mfrow = c(2, 2))
+plot(pgls_act)
+par(mfrow = c(1, 1))
+
+#Likelihood plot for Pagel's lambda. Solid red line indicates estimate for lambda and broken red lines indcaite the 95% confidence interval
+lambda.act <- pgls.profile(pgls_act, "lambda")
+plot(lambda.act)
+
+#main effects
+anova(pgls_act)
+
+#print model output 
+summary(pgls_act)
+```
+
+# Larval Habitat PGLS
+
+```{r}
+# Run larval habitat pgls--------
+
+pgls_larv1 <- pgls(cor_av ~ Larval_Habitat,
+               data = sal.comp, 
+               lambda = "ML", #uses Maximum Likelihood estimate of lambda
+               param.CI = 0.95)
+
+#main effects
+anova(pgls_larv1)
+
+#print model output 
+summary(pgls_larv1)
+
+#PGLS cornea diameter vs. cube root of mass + habitat
+pgls_larv <- pgls(log10(cor_av) ~ log10(rootmass_av) + Larval_Habitat,
+               data = sal.comp, 
+               lambda = "ML", #uses Maximum Likelihood estimate of lambda
+               param.CI = 0.95)
+
+#diagnostic plots
+par(mar = c(4,4,2,2))
+par(mfrow = c(2, 2))
+plot(pgls_larv)
+par(mfrow = c(1, 1))
+
+#Likelihood plot for Pagel's lambda. Solid red line indicates estimate for lambda and broken red lines indcaite the 95% confidence interval
+lambda.larv <- pgls.profile(pgls_larv, "lambda")
+plot(lambda.larv)
+
+#main effects
+anova(pgls_larv)
+
+#print model output 
+summary(pgls_larv)
+```
+
+# Aquatic PGLS
+
+```{r}
+# Run aquatic pgls--------
+
+pgls_aq1 <- pgls(cor_av ~ Development,
+               data = aquatic.comp, 
+               lambda = "ML", #uses Maximum Likelihood estimate of lambda
+               param.CI = 0.95)
+
+#main effects
+anova(pgls_aq1)
+
+#print model output 
+summary(pgls_aq1)
+
+#PGLS cornea diameter vs. cube root of mass + habitat
+pgls_aq <- pgls(log10(cor_av) ~ log10(rootmass_av) + Development,
+               data = aquatic.comp, 
+               lambda = "ML", #uses Maximum Likelihood estimate of lambda
+               param.CI = 0.95)
+
+#diagnostic plots
+par(mar = c(4,4,2,2))
+par(mfrow = c(2, 2))
+plot(pgls_aq)
+par(mfrow = c(1, 1))
+
+#Likelihood plot for Pagel's lambda. Solid red line indicates estimate for lambda and broken red lines indcaite the 95% confidence interval
+lambda.aq <- pgls.profile(pgls_aq, "lambda")
+plot(lambda.aq)
+
+#main effects
+anova(pgls_aq)
+
+#print model output 
+summary(pgls_aq)
+```

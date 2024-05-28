@@ -58,10 +58,10 @@ Next, we make boxplots of how eye size and relative eye size (represented by the
 # colorblind-friendly color vectors -------
 # create vector of colors for adult habitat
 col_hab <- c("aquatic" = "#0072B2",
-             "scansorial" = "#009E73",
-             "semiaquatic" = "#56B4E9",
              "subfossorial" = "#CC79A7",
-             "terrestrial" = "#E69F00")
+             "terrestrial" = "#E69F00",
+             "semiaquatic" = "#56B4E9",
+             "scansorial" = "#009E73")
 
 #create vector of colors for activity period
 col_act <- c("both" = "deeppink3",
@@ -75,7 +75,7 @@ col_larv <- c("lentic water" = "royalblue1",
          "both" = "darkslateblue")
 
 # create vector of colors for metamorphosing/paedomorphic aquatic species
-col_dev <- c("metamorphosizing" = "darkturquoise", 
+col_dev <- c("metamorphosing" = "darkturquoise", 
          "paedomorphic" = "black")
 
 ```
@@ -226,20 +226,37 @@ adult_habitat.abs <- ggplot(data = filter(pglsres.cdmass.all.exp, !is.na(Adult_H
   #scale_shape_manual(values = shape_hab, name = "Adult habitat")
 
 # Boxplot of cornea investment (by mass) vs adult habitat
-adult_habitat.inv <- ggplot(data = filter(pglsres.cdmass.all.exp, !is.na(Adult_Habitat)), 
-                             aes(x = reorder(Adult_Habitat, pglsres.cdmass, FUN = mean), y = pglsres.cdmass)) +
-  geom_boxplot(notch = FALSE, outlier.shape = NA, alpha = 0.5) +
-  stat_summary(fun.y = mean, color = "black", geom = "point", 
-               shape = 18, size = 3, show_guide = FALSE) +
-  geom_jitter(aes(text = Genus_Species, color = Adult_Habitat), 
-              shape = 19, size = 2, alpha = 0.5, position = position_jitter(0.15)) +
-  theme(text = element_text(size = 14), panel.background = element_blank(), 
-        axis.line = element_line(colour = "black")) +
-  theme(axis.text = element_text(angle = 0, size = 9)) +
-  scale_color_manual(values = col_hab) +  # Use the color vector for manual color coloring based on Adult_Habitat
-  ylab("Cornea investment (mass)") +
-  xlab("Adult habitat") +
-  theme(legend.position = "none")
+adult_habitat_inv <- ggplot(data = filter(pglsres.cdmass.all.exp, !is.na(Adult_Habitat)),
+                            aes(x = reorder(Adult_Habitat, pglsres.cdmass, FUN = mean), y = pglsres.cdmass)) +
+  geom_boxplot(aes(fill = Adult_Habitat), notch = FALSE, outlier.shape = NA, alpha = 0.5) +
+  stat_summary(aes(shape = Adult_Habitat, fill = Adult_Habitat), fun = mean, geom = "point", 
+               color = "black", size = 3) +  # Adjust size of mean shapes
+  geom_jitter(aes(text = Genus_Species, shape = Adult_Habitat, size = if_else(
+                  Adult_Habitat %in% c("subfossorial", "terrestrial", "semiaquatic"), 2, 1)), 
+              color = "black", alpha = 0.5, position = position_jitter(0.2)) +  # Adjust data point sizes
+  theme(text = element_text(size = 14), panel.background = element_blank(),
+        axis.line = element_line(colour = "black", size = 1)) +
+  scale_fill_manual(values = col_hab) +  # Ensure col_hab includes colors for each habitat type
+  scale_shape_manual(values = c(
+    "aquatic" = 25,  # Upside-down triangle
+    "subfossorial" = 16,  # Circle
+    "terrestrial" = 18,  # Diamond
+    "semiaquatic" = 15,  # Square
+    "scansorial" = 24  # Triangle
+  )) +
+  scale_y_continuous(labels = function(x) paste0(x, "x")) +
+  ylab("cornea investment") +
+  xlab("adult habitat") +
+  theme(legend.position = "none") +
+  scale_x_discrete(labels = c("Aq", "Su", "Te", "Se", "Sc")) +
+  theme(
+    axis.text.x = element_text(angle = 0, size = 12, hjust = 0.5, vjust = 0.5),
+    axis.text.y = element_text(size = 12),
+    axis.ticks.x = element_line(colour = "black", size = 1)
+  )
+
+plot(adult_habitat_inv)
+
 
 # Boxplot of cornea investment (by SVL) vs adult habitat
 adult_habitat.invsvl <- ggplot(data = filter(pglsres.cdsvl.all, !is.na(Adult_Habitat)), 
@@ -250,11 +267,12 @@ adult_habitat.invsvl <- ggplot(data = filter(pglsres.cdsvl.all, !is.na(Adult_Hab
   geom_jitter(aes(text = Genus_Species, color = Adult_Habitat), 
               shape = 19, size = 2, alpha = 0.5, position = position_jitter(0.15)) +
   theme(text = element_text(size = 14), panel.background = element_blank(), 
-        axis.line = element_line(colour = "black")) +
+        axis.line = element_line(colour = "black"),
+        axis.text.x = element_blank()) +
   theme(axis.text = element_text(angle = 0, size = 9)) +
   scale_color_manual(values = col_hab) +  # Use the color vector for manual color coloring based on Adult_Habitat
   ylab("Cornea investment (SVL)") +
-  xlab("Adult Habitat") +
+  xlab("Adult Habit") +
   theme(legend.position = "none")
 
 # Look at the plot with the plotly package - you can hover over data points to see what each species is, great way to check outliers!
@@ -393,10 +411,12 @@ ggsave("../Plots/larvalhabitat.invsvl.boxplot.pdf", plot = larval_habitat.invsvl
 
 ```
 
-
 ##Cornea size and investment by development status of aquatic species
 
 ```{r}
+#Rename metamorphosizing to metamorphosing
+pglsres.cdmass.all.exp <- pglsres.cdmass.all.exp %>%
+    mutate(Development = recode(Development, "metamorphosizing" = "metamorphosing"))
 # Filtering out only aquatic species into a new dataset
 aquatic_species <- pglsres.cdmass.all.exp %>%
   filter(Adult_Habitat == "aquatic")
@@ -409,7 +429,7 @@ aquaticdevelopment.abs <- ggplot(data = aquatic_species, aes(x = reorder(Develop
   stat_summary(fun.y = mean, color = "black", geom = "point", 
                shape = 18, size = 3, show_guide = FALSE) +
   geom_jitter(aes(text = Genus_Species, color = Development), 
-              shape = 19, size = 2, alpha = 0.7, position = position_jitter(0.15)) +
+              shape = 19, size = 2, alpha = 0.7, position = position_jitter(width=0.1)) +
   theme(text = element_text(size = 14), panel.background = element_blank(), 
         axis.line = element_line(colour = "black")) +
   theme(axis.text = element_text(angle = 0, size = 9)) +
@@ -419,19 +439,42 @@ aquaticdevelopment.abs <- ggplot(data = aquatic_species, aes(x = reorder(Develop
   theme(legend.position = "none")
 
 # Boxplot of pgls residuals by mass vs. paedomorphic/metamorphosizing status
-aquaticdevelopment.mass <- ggplot(data = aquatic_species, aes(x = reorder(Development, pglsres.cdmass, FUN = mean), y = pglsres.cdmass)) +
-  geom_boxplot(notch = FALSE, outlier.shape = NA) +
-  stat_summary(fun.y = mean, color = "black", geom = "point", 
-               shape = 18, size = 3, show_guide = FALSE) +
-  geom_jitter(aes(text = Genus_Species, color = Development), 
-              shape = 19, size = 2, alpha = 0.7, position = position_jitter(0.15)) +
-  theme(text = element_text(size = 14), panel.background = element_blank(), 
-        axis.line = element_line(colour = "black")) +
-  theme(axis.text = element_text(angle = 0, size = 9)) +
-  scale_color_manual(values = col_dev) +  # Use the color vector for manual color coloring based on Adult_Habitat
-  ylab("Cornea investment (mass)") +
-  xlab("Development Type") +
-  theme(legend.position = "none")
+aquaticdevelopment_mass <- ggplot(data = aquatic_species, aes(x = reorder(Development, pglsres.cdmass, FUN = mean), y = pglsres.cdmass)) +
+  # Boxplot without fill color and thicker line width
+  geom_boxplot(aes(), notch = FALSE, outlier.shape = NA, alpha = 0.5, lwd = 0.9, width = 0.5, fill = NA) +
+  # Stat summary with mean shapes
+  stat_summary(aes(shape = Development), fun.y = mean, color = "black", geom = "point", size = 3.5) +
+  # Jitter plot with black-filled data points
+  geom_jitter(aes(text = Genus_Species, shape = Development), color = "black", fill = "gray50", alpha = 0.5, size = 1.6, position = position_jitter(width = 0.05)) +
+  # Custom shapes
+  scale_shape_manual(values = c(
+    "paedomorphic" = 24,  # Triangle
+    "metamorphosing" = 21 # Circle
+  )) +
+  # Custom y-axis
+  scale_y_continuous(labels = function(x) paste0(x, "x"),
+                     limits = c(0.5, 1.5),
+                     expand = c(0.01, 0.01)) +
+  # Labels and theme settings
+  ylab("cornea investment (Aq only)") +
+  xlab("development type") +
+  theme(
+    text = element_text(size = 26),
+    panel.background = element_blank(),
+    axis.line = element_line(colour = "black", size = 1),
+    axis.title = element_text(size = 32),
+    axis.text = element_text(size = 28),
+    axis.ticks = element_line(color = "black", size = 1),
+    legend.position = "none",
+    axis.text.x = element_text(angle = 0, hjust = 0.5, vjust = 0.5, size = 26),
+    axis.text.y = element_text(size = 26),
+    axis.ticks.length = unit(0.25, "cm")
+  ) +
+  scale_x_discrete(labels = c("Pa", "Me"))
+
+# Display the plot
+plot(aquaticdevelopment_mass)
+
 
 # Boxplot of pgls residuals by svl vs. paedomorphic/metamorphosizing status
 aquaticdevelopment.svl <- ggplot(data = aquatic_species.svl, aes(x = reorder(Development, pglsres.cdsvl, FUN = mean), y = pglsres.cdsvl)) +
@@ -449,46 +492,147 @@ aquaticdevelopment.svl <- ggplot(data = aquatic_species.svl, aes(x = reorder(Dev
   theme(legend.position = "none")
 
 # Look at the plot with the plotly package - you can hover over data points to see what each species is, great way to check outliers!
-ggplotly(aquaticdevelopment.abs)
-ggplotly(aquaticdevelopment.mass)
-ggplotly(aquaticdevelopment.svl)
+#ggplotly(aquaticdevelopment.abs)
+plot(aquaticdevelopment.mass)
+#ggplotly(aquaticdevelopment.svl)
 
 # Export plot to pdf - you can change the export dimensions by changing the height and width numbers to make it fit well on your poster!
-ggsave("../Plots/aquaticdevelopment.abs.boxplot.pdf", plot = aquaticdevelopment, device = "pdf")
-ggsave("../Plots/aquaticdevelopment.mass.boxplot.pdf", plot = aquaticdevelopment, device = "pdf")
-ggsave("../Plots/aquaticdevelopment.svl.boxplot.pdf", plot = aquaticdevelopment.svl, device = "pdf")
+#ggsave("../Plots/aquaticdevelopment.abs.boxplot.pdf", plot = aquaticdevelopment, device = "pdf")
+ggsave("../Plots/aquaticdevelopment.mass.boxplot2.pdf", plot = aquaticdevelopment_mass, device = "pdf", width = 6, height = 8)
+#ggsave("../Plots/aquaticdevelopment.svl.boxplot.pdf", plot = aquaticdevelopment.svl, device = "pdf")
 ```
 
+```{r}
+#make dataframe for labeling phylogeny figure
+sal.phy <- pglsres.cdmass.all.exp %>%
+  #make column labeling tip labels that match phylogeny
+  mutate(tip = Genus_Species) %>%
+  #put genus and species in separate columns
+  separate(Genus_Species, c("genus", "species"), sep = "_", extra = "drop") %>%
+  #add tip labels with regular text
+  mutate(labels = as.factor(paste(genus, species, sep = " "))) %>%
+  #keep only columns we will use for plotting
+  select(tip, labels, cor_av, pglsres.cdmass, Adult_Habitat, Development) 
+
+# set row names in dataset to match the tip labels in the tree
+row.names(sal.phy) <- sal.phy$tip
+
+#check that phylogeny and data match exactly
+name.check(caudatatree, sal.phy)
+```
 Next, we use ggtree to plot the phylogeny alongside bar plots for absolute cornea diameter and relative conea size. 
 
 ```{r, fig.height=18, fig.width=6}
 library(ggtree)
+
 # Make the phylogeny plot
 p <- ggtree(caudatatree) %<+% labs + 
      geom_tiplab(size = 3, aes(label = labels), fontface = 3) + 
    xlim_tree(375) + 
    coord_cartesian(clip = 'off') 
+plot(p)
 # Make a second plot next to the phylogeny (bars for cornea diameter)
-p2 <- facet_plot(p, panel="Cornea diameter (mm)", data=sal.phy, geom=geom_segment, aes(x=0, xend=cor_av, y=y, yend=y, color = hab), size = 3, alpha = 0.7) +
-  scale_color_manual(values = col_hab,
-                     name = "Adult habitat")
+p2 <- facet_plot(p, panel="Cornea diameter (mm)", data=sal.phy, geom=geom_segment, aes(x=0, xend=cor_av, y=y, yend=y, color = Development), size = 3, alpha = 0.7) 
+plot(p2)
+
 # Make a third plot next to the first two (bars for relative cornea size)
-p3 <- facet_plot(p2, panel='Relative cornea size', data=sal.phy, geom=geom_segment, aes(x=0, xend=pglsres.cdmass, y=y, yend=y, color = hab), size=3, alpha = 0.7) +
-  theme_tree2(legend.position=c(.07, .93)) +# add scale bars and move legends
-  scale_color_manual(values = col_hab,
-                     name = "Adult habitat")
+p3 <- facet_plot(p2, panel='Relative cornea size', data=sal.phy, geom=geom_segment, aes(x=1, xend=pglsres.cdmass, y=y, yend=y, color = Development), size=3, alpha = 0.7) +
+  scale_color_manual(values = col_dev) +
+  theme_tree2(legend.position=c(.07, .93)) 
+plot(p3)
+
+
 #control widths of panels
  gt = ggplot_gtable(ggplot_build(p3))
-# gtable_show_layout(gt) # will show you the layout - very handy function
-# gt # see plot layout in table format
+#gtable_show_layout(gt) # will show you the layout - very handy function
+#gt # see plot layout in table format
 # gt$layout$l[grep('tree', gt$layout$name)] # you want to find the column specific to panel-2
  gt$widths[7] = 0.5*gt$widths[5] # reduce column 7
  gt$widths[9] = 0.5*gt$widths[5]
 #print figure
 plot(gt)
-#export figure
-pdf("tree-figure.pdf", width = 8, height = 22)
-grid::grid.draw(gt) # plot with grid draw
-dev.off()
+# Export plot to pdf - you can change the export dimensions by changing the height and width numbers to make it fit well on your poster!
+ggsave("../Plots/tree-figure.pdf", plot = gt, device = "pdf", width = 12, height = 18)
 ```
 
+
+```{r}
+aquaticdevelopment.mass <- ggplot(data = aquatic_species, aes(x = reorder(Development, pglsres.cdmass, FUN = mean), y = pglsres.cdmass)) +
+  geom_boxplot(aes(fill = Development), notch = FALSE, outlier.shape = NA, alpha = 0.5, lwd = 0.9, width = 0.5) +
+  stat_summary(aes(shape = Development, fill = Development), fun.y = mean, color = "black", geom = "point", size = 3.5,) +
+  geom_jitter(aes(text = Genus_Species, shape = Development, fill = "black"), color = "black", alpha = 0.5, size = 1.6, position = position_jitter(0.05)) +
+  scale_shape_manual(values = c(
+    "paedomorphic" = 24,  # Triangle
+    "metamorphosing" = 21 # Circle
+    )) +  
+scale_fill_manual(values = col_dev) +
+  scale_y_continuous(labels = function(x) paste0(x, "x"), 
+                     limits = c(0.5, 1.5), 
+                     expand = c(0.01, 0.01)) +
+  ylab("cornea investment (Aq only)") +
+  xlab("development type") +
+  theme(
+    text = element_text(size = 20),
+    panel.background = element_blank(),
+    axis.line = element_line(colour = "black", size = 1),
+    axis.title = element_text(size = 34), 
+    axis.text = element_text(size = 30),  
+    axis.ticks = element_line(color = "black", size = 1.2), 
+    legend.position = "none",
+    axis.text.x = element_text(angle = 0, hjust = 0.5, vjust = 0.5),
+    axis.text.y = element_text(size = 30),
+    axis.ticks.length = unit(0.25, "cm")
+  ) +
+  scale_x_discrete(labels = c("Pa", "Me")) +
+  theme(axis.text.x = element_text(angle = 0, hjust = 0.5, vjust = 0.5))
+
+# Display the plot
+plot(aquaticdevelopment.mass)
+
+# Save the plot as a square-shaped PDF
+ggsave("../Plots/aquaticdevelopment.mass.boxplot.pdf", plot = aquaticdevelopment.mass, device = "pdf", width = 6, height = 8)
+```
+
+
+```{r}
+adult_habitat_inv <- ggplot(data = filter(pglsres.cdmass.all.exp, !is.na(Adult_Habitat)),
+                            aes(x = reorder(Adult_Habitat, pglsres.cdmass, FUN = mean), y = pglsres.cdmass)) +
+  geom_boxplot(aes(fill = Adult_Habitat), notch = FALSE, outlier.shape = NA, alpha = 0.5, lwd = 0.9) +  # Adjust lwd for thicker boxplot lines
+  stat_summary(aes(shape = Adult_Habitat, fill = Adult_Habitat), fun.y = mean, geom = "point", size = 3.5, color = "black") +
+  geom_jitter(aes(text = Genus_Species, shape = Adult_Habitat, fill = "black"), color = "black", alpha = 0.5,  
+              size = 1.6, position = position_jitter(0.1)) +
+  scale_shape_manual(values = c(
+    "aquatic" = 25,  # Upside-down triangle
+    "subfossorial" = 21,  # Circle
+    "terrestrial" = 23,  # Diamond
+    "semiaquatic" = 22,  # Square
+    "scansorial" = 24  # Triangle
+  )) +
+  scale_fill_manual(values = col_hab) +
+  scale_y_continuous(labels = function(x) paste0(x, "x")) +
+  ylab("cornea investment") +
+  xlab("adult habit") +
+  theme(
+    text = element_text(size = 20),
+    axis.title = element_text(size = 34), 
+    axis.text = element_text(size = 30),  
+    axis.ticks = element_line(size = 1.2), 
+    panel.background = element_blank(),
+    axis.line = element_line(colour = "black", size = 1),
+    legend.position = "none"
+  ) +
+  scale_x_discrete(labels = c("Aq", "Su", "Te", "Se", "Sc")) +
+  theme(
+    axis.text.x = element_text(angle = 0, hjust = 0.5, vjust = 0.5),
+    axis.text.y = element_text(size = 30),
+    axis.ticks = element_line(colour = "black", size = 1),
+    axis.ticks.length = unit(0.25, "cm")
+  )
+
+# Plot the final figure
+plot(adult_habitat_inv)
+
+# Save the plot as a square-shaped PDF
+ggsave("../Plots/adulthabitat.invmass.boxplot.pdf", plot = adult_habitat_inv, device = "pdf", width = 8, height = 8)
+
+```

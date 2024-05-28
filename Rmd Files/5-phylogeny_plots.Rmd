@@ -1,0 +1,285 @@
+---
+title: "Plotting phylogenies by ecological state"
+author: "Nicole Bednarik & Katie Thomas"
+date: 28 May 2024
+output:
+  html_document:
+    theme: flatly
+    toc: TRUE
+    toc_float: TRUE
+    code_fold: show
+---
+
+```{r setup, include = FALSE}
+
+# Load package libraries
+library(plyr)
+library(smatr)
+library(picante)
+library(nlme)
+library(ape)
+library(evobiR)
+library(geiger)
+library(caper)
+library(phytools)
+library(phylotools)
+library(plotly)
+library(kableExtra)
+library(gridExtra)
+library(ggimage)
+library(ggtree)
+library(grid)
+library(gtable)
+library(cowplot)
+library(knitr)
+library(mvMORPH)
+library(tidyverse)
+
+# Markdown settings
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE, fig.height = 4.5, fig.width=8)
+
+```
+
+# Data
+
+First we import our tidied salamander morphology & trait datasets with the residuals of PGLS fits. 
+
+```{r load-data, results = "hide"}
+
+# Import tidied data
+pglsres.cdmass.all <- data.frame(read.csv("../Data/Tidy/pglsres.cdmass.all.csv", header=TRUE, na.strings=c("", "NA", " ","<1")))
+pglsres.edmass.all <- data.frame(read.csv("../Data/Tidy/pglsres.edmass.all.csv", header=TRUE, na.strings=c("", "NA", " ","<1")))
+pglsres.cdsvl.all <- data.frame(read.csv("../Data/Tidy/pglsres.cdsvl.all.csv", header=TRUE, na.strings=c("", "NA", " ","<1")))
+pglsres.edsvl.all <- data.frame(read.csv("../Data/Tidy/pglsres.edsvl.all.csv", header=TRUE, na.strings=c("", "NA", " ","<1")))
+
+# Quick look at data structure
+str(pglsres.cdmass.all)
+str(pglsres.edmass.all)
+str(pglsres.cdsvl.all)
+str(pglsres.edsvl.all)
+
+# Exponentiate PGLS residuals for plots and put in new dataframes
+pglsres.cdmass.all.exp <- pglsres.cdmass.all %>%
+  mutate(pglsres.cdmass = 10^pglsres.cdmass)
+pglsres.edmass.all.exp <- pglsres.edmass.all %>%
+  mutate(pglsres.edmass = 10^pglsres.edmass)
+pglsres.cdsvl.all.exp <- pglsres.cdsvl.all %>%
+  mutate(pglsres.cdsvl = 10^pglsres.cdsvl)
+pglsres.edsvl.all.exp <- pglsres.edsvl.all %>%
+  mutate(pglsres.edsvl = 10^pglsres.edsvl)
+```
+
+Next, we import the amphibian tree from Jetz and Pyron (2019) that has been pruned to match the salamander species in this dataset.
+
+```{r, fig.height=18, fig.width=7}
+
+# Import pruned phylogeny
+caudatatree <- read.nexus("../Data/Tidy/caudata-tree.nex")
+
+# Plot tree
+plot.phylo(caudatatree, show.tip.label=TRUE, cex = 0.7)
+
+```
+
+# Phylogenetic distribution of absolute and relative eye size
+
+We then plot absolute eye size and relative eye investment (represented by the residual of the eye size vs. body size PGLS) onto the salamander phylogeny. 
+
+## Color figures with pallettes in the frog paper
+
+We start by running a custom color palette for the 4 ecological states to be used for all following figures. 
+
+First we define what we want those color palettes to be:
+
+```{r color-pallette, results = "hide"}
+
+# Rename metamorphosizing to metamorphosing
+pglsres.cdmass.all.exp <- pglsres.cdmass.all.exp %>%
+    mutate(Development = recode(Development, "metamorphosizing" = "metamorphosing"))
+
+# Rename no larva to no larvae
+pglsres.cdmass.all.exp <- pglsres.cdmass.all.exp %>%
+    mutate(Larval_Habitat = recode(Larval_Habitat, "no larva" = "no larvae"))
+
+# Define a colorblind-friendly vector of colors for adult habitat, activity period, larval habitat, and development mode
+col_hab <- c("aquatic" = "#0072B2",
+             "scansorial" = "#009E73",
+             "semiaquatic" = "#56B4E9",
+             "subfossorial" = "#CC79A7",
+             "terrestrial" = "#E69F00")
+col_act <- c("both" = "deeppink3",
+             "diurnal" = "darkgoldenrod1", 
+             "nocturnal" = "blueviolet")
+col_larv <- c("lentic water" = "royalblue1", 
+         "lotic water" = "skyblue1",
+         "no larvae" = "lightcoral",
+         "both" = "forestgreen")
+col_dev <- c("metamorphosing" = "darkturquoise",
+             "paedomorphic" = "black",
+             "direct development" = "#332288")
+```
+
+## Phylogenetic distribution of eye size by adult habitat
+
+Here we create the salamander phylogeny with absolute cornea size and relative cornea investment (mass) for Figure 1, colored by Adult Habitat. We first need to make a dataframe that includes the phylogeny.
+
+```{r sal-phy, results = "hide"}
+
+# Make dataframe for labeling phylogeny figure
+sal.phy <- pglsres.cdmass.all.exp %>%
+  # Make column labeling tip labels that match phylogeny
+  mutate(tip = Genus_Species) %>%
+  separate(Genus_Species, c("genus", "species"), sep = "_", extra = "drop") %>%
+  # Add tip labels with regular text
+  mutate(labels = as.factor(paste(genus, species, sep = " "))) %>%
+  select(tip, labels, cor_av, pglsres.cdmass, Adult_Habitat, Activity_Period, Larval_Habitat, Development) 
+
+# Set row names in dataset to match the tip labels in the tree
+row.names(sal.phy) <- sal.phy$tip
+
+# Check that phylogeny and data match exactly
+name.check(caudatatree, sal.phy)
+```
+
+Next, we use ggtree to plot the phylogeny alongside bar plots for absolute cornea diameter and relative cornea size. 
+
+```{r, fig.height=18, fig.width=6}
+
+# Make the phylogeny plot
+p <- ggtree(caudatatree) %<+% labs + 
+     geom_tiplab(size = 3, aes(label = labels), fontface = 3) + 
+   xlim_tree(375) + 
+   coord_cartesian(clip = 'off') 
+
+# Make a second plot next to the phylogeny (bars for cornea diameter)
+p2 <- facet_plot(p, panel="Cornea diameter (mm)", data=sal.phy, geom=geom_segment, aes(x=0, xend=cor_av, y=y, yend=y, color = Adult_Habitat), size = 3, alpha = 0.7) 
+
+# Make a third plot next to the first two (bars for relative cornea size)
+p3 <- facet_plot(p2, panel='Relative cornea size', data=sal.phy, geom=geom_segment, aes(x=1, xend=pglsres.cdmass, y=y, yend=y, color = Adult_Habitat), size=3, alpha = 0.7) +
+  scale_color_manual(values = col_hab) +
+  theme_tree2(legend.position=c(.07, .93)) 
+
+# Control widths of panels
+ gt = ggplot_gtable(ggplot_build(p3))
+ 
+#gtable_show_layout(gt) # Will show you the layout - very handy function
+#gt # See plot layout in table format
+ gt$layout$l[grep('tree', gt$layout$name)] # You want to find the column specific to panel-2
+ gt$widths[7] = 0.5*gt$widths[5] # Reduce column 7
+ gt$widths[9] = 0.5*gt$widths[5]
+ 
+# Print figure
+plot(gt)
+# Export plot to pdf 
+ggsave("../Plots/hab-tree-figure.pdf", plot = gt, device = "pdf", width = 12, height = 18)
+```
+
+We repeat the same steps for phylogenies colored by activity period, larval habitat, and development.
+
+## Phylogenetic distribution of eye size by activity period
+
+```{r, fig.height=18, fig.width=6}
+
+# Filter out species with NA for activity period
+sal.phy.act <- sal.phy %>% filter(!is.na(Activity_Period))
+
+# Make the phylogeny plot
+p_act <- ggtree(caudatatree) %<+% labs + 
+     geom_tiplab(size = 3, aes(label = labels), fontface = 3) + 
+   xlim_tree(375) + 
+   coord_cartesian(clip = 'off') 
+
+# Make a second plot next to the phylogeny (bars for cornea diameter)
+p2_act <- facet_plot(p_act, panel="Cornea diameter (mm)", data=sal.phy.act, geom=geom_segment, aes(x=0, xend=cor_av, y=y, yend=y, color = Activity_Period), size = 3, alpha = 0.7) 
+
+# Make a third plot next to the first two (bars for relative cornea size)
+p3_act <- facet_plot(p2_act, panel='Relative cornea size', data=sal.phy.act, geom=geom_segment, aes(x=1, xend=pglsres.cdmass, y=y, yend=y, color = Activity_Period), size=3, alpha = 0.7) +
+  scale_color_manual(values = col_act) +
+  theme_tree2(legend.position=c(.07, .93)) 
+
+# Control widths of panels
+ gt_act = ggplot_gtable(ggplot_build(p3_act))
+ 
+#gtable_show_layout(gt_act) # Will show you the layout - very handy function
+#gt_act # See plot layout in table format
+ gt_act$layout$l[grep('tree', gt_act$layout$name)] # You want to find the column specific to panel-2
+ gt_act$widths[7] = 0.5*gt_act$widths[5] # Reduce column 7
+ gt_act$widths[9] = 0.5*gt_act$widths[5]
+ 
+# Print figure
+plot(gt_act)
+# Export plot to pdf 
+ggsave("../Plots/act-tree-figure.pdf", plot = gt_act, device = "pdf", width = 12, height = 18)
+```
+
+## Phylogenetic distribution of eye size by larval habitat
+
+```{r, fig.height=18, fig.width=6}
+
+# Filter out species with NA for larval habitat
+sal.phy.larv <- sal.phy %>% filter(!is.na(Larval_Habitat))
+
+# Make the phylogeny plot
+p_larv <- ggtree(caudatatree) %<+% labs + 
+     geom_tiplab(size = 3, aes(label = labels), fontface = 3) + 
+   xlim_tree(375) + 
+   coord_cartesian(clip = 'off') 
+
+# Make a second plot next to the phylogeny (bars for cornea diameter)
+p2_larv <- facet_plot(p_larv, panel="Cornea diameter (mm)", data=sal.phy.larv, geom=geom_segment, aes(x=0, xend=cor_av, y=y, yend=y, color = Larval_Habitat), size = 3, alpha = 0.7) 
+
+# Make a third plot next to the first two (bars for relative cornea size)
+p3_larv <- facet_plot(p2_larv, panel='Relative cornea size', data=sal.phy.larv, geom=geom_segment, aes(x=1, xend=pglsres.cdmass, y=y, yend=y, color = Larval_Habitat), size=3, alpha = 0.7) +
+  scale_color_manual(values = col_larv) +
+  theme_tree2(legend.position=c(.07, .93)) 
+
+# Control widths of panels
+ gt_larv = ggplot_gtable(ggplot_build(p3_larv))
+ 
+#gtable_show_layout(gt_larv) # Will show you the layout - very handy function
+#gt_larv # See plot layout in table format
+ gt_larv$layout$l[grep('tree', gt_larv$layout$name)] # You want to find the column specific to panel-2
+ gt_larv$widths[7] = 0.5*gt_larv$widths[5] # Reduce column 7
+ gt_larv$widths[9] = 0.5*gt_larv$widths[5]
+ 
+# Print figure
+plot(gt_larv)
+# Export plot to pdf 
+ggsave("../Plots/larv-tree-figure.pdf", plot = gt_larv, device = "pdf", width = 12, height = 18)
+```
+
+## Phylogenetic distribution of eye size by development mode
+
+```{r, fig.height=18, fig.width=6}
+
+# Filter out species with NA for development mode
+sal.phy.dev <- sal.phy %>% filter(!is.na(Development))
+
+# Make the phylogeny plot
+p_dev <- ggtree(caudatatree) %<+% labs + 
+     geom_tiplab(size = 3, aes(label = labels), fontface = 3) + 
+   xlim_tree(375) + 
+   coord_cartesian(clip = 'off') 
+
+# Make a second plot next to the phylogeny (bars for cornea diameter)
+p2_dev <- facet_plot(p_dev, panel="Cornea diameter (mm)", data=sal.phy.dev, geom=geom_segment, aes(x=0, xend=cor_av, y=y, yend=y, color = Development), size = 3, alpha = 0.7) 
+
+# Make a third plot next to the first two (bars for relative cornea size)
+p3_dev <- facet_plot(p2_dev, panel='Relative cornea size', data=sal.phy.dev, geom=geom_segment, aes(x=1, xend=pglsres.cdmass, y=y, yend=y, color = Development), size=3, alpha = 0.7) +
+  scale_color_manual(values = col_dev) +
+  theme_tree2(legend.position=c(.07, .93)) 
+
+# Control widths of panels
+ gt_dev = ggplot_gtable(ggplot_build(p3_dev))
+ 
+#gtable_show_layout(gt_dev) # Will show you the layout - very handy function
+#gt_dev # See plot layout in table format
+ gt_dev$layout$l[grep('tree', gt_dev$layout$name)] # You want to find the column specific to panel-2
+ gt_dev$widths[7] = 0.5*gt_dev$widths[5] # Reduce column 7
+ gt_dev$widths[9] = 0.5*gt_dev$widths[5]
+ 
+# Print figure
+plot(gt_dev)
+# Export plot to pdf 
+ggsave("../Plots/dev-tree-figure.pdf", plot = gt_dev, device = "pdf", width = 12, height = 18)
+```

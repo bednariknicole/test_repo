@@ -1,0 +1,823 @@
+---
+title: "Boxplots"
+author: "Nicole Bednarik & Katie Thomas"
+date: 28 May 2024
+output:
+  html_document:
+    theme: flatly
+    toc: TRUE
+    toc_float: TRUE
+    code_fold: show
+---
+
+```{r setup, include = FALSE}
+
+# Load package libraries
+library(plyr)
+library(geiger)
+library(caper)
+library(plotly)
+library(kableExtra)
+library(gridExtra)
+library(ggimage)
+library(ggtree)
+library(grid)
+library(gtable)
+library(cowplot)
+library(knitr)
+library(tidyverse)
+library(plotly)
+
+# Markdown settings
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE, fig.height = 4.5, fig.width=8)
+```
+
+# Data
+
+First we import our tidied salamander morphology & trait datasets with the residuals of PGLS fits.
+
+```{r load-data, results = "hide"}
+
+# Import tidied data
+pglsres.cdmass.all <- data.frame(read.csv("../Data/Tidy/pglsres.cdmass.all.csv", header=TRUE, na.strings=c("", "NA", " ","<1")))
+pglsres.edmass.all <- data.frame(read.csv("../Data/Tidy/pglsres.edmass.all.csv", header=TRUE, na.strings=c("", "NA", " ","<1")))
+pglsres.cdsvl.all <- data.frame(read.csv("../Data/Tidy/pglsres.cdsvl.all.csv", header=TRUE, na.strings=c("", "NA", " ","<1")))
+pglsres.edsvl.all <- data.frame(read.csv("../Data/Tidy/pglsres.edsvl.all.csv", header=TRUE, na.strings=c("", "NA", " ","<1")))
+
+# Quick look at data structure
+str(pglsres.cdmass.all)
+str(pglsres.edmass.all)
+str(pglsres.cdsvl.all)
+str(pglsres.edsvl.all)
+
+# Exponentiate PGLS residuals for plots and put in new dataframe
+pglsres.cdmass.all.exp <- pglsres.cdmass.all %>%
+  mutate(pglsres.cdmass = 10^pglsres.cdmass)
+pglsres.edmass.all.exp <- pglsres.edmass.all %>%
+  mutate(pglsres.edmass = 10^pglsres.edmass)
+pglsres.cdsvl.all.exp <- pglsres.cdsvl.all %>%
+  mutate(pglsres.cdsvl = 10^pglsres.cdsvl)
+pglsres.edsvl.all.exp <- pglsres.edsvl.all %>%
+  mutate(pglsres.edsvl = 10^pglsres.edsvl)
+```
+
+# Boxplots
+
+Next, we make boxplots of how eye size and relative eye size (represented by the PGLS residuals) compare across salamander ecological traits.
+
+```{r color-pallette, results = "hide"}
+
+# Rename metamorphosizing to metamorphosing
+pglsres.cdmass.all.exp <- pglsres.cdmass.all.exp %>%
+    mutate(Development = recode(Development, "metamorphosizing" = "metamorphosing"))
+pglsres.cdsvl.all.exp <- pglsres.cdsvl.all.exp %>%
+    mutate(Development = recode(Development, "metamorphosizing" = "metamorphosing"))
+pglsres.edmass.all.exp <- pglsres.edmass.all.exp %>%
+    mutate(Development = recode(Development, "metamorphosizing" = "metamorphosing"))
+
+# Rename no larva to no larvae
+pglsres.cdmass.all.exp <- pglsres.cdmass.all.exp %>%
+    mutate(Larval_Habitat = recode(Larval_Habitat, "no larva" = "no larvae"))
+pglsres.cdsvl.all.exp <- pglsres.cdsvl.all.exp %>%
+    mutate(Larval_Habitat = recode(Larval_Habitat, "no larva" = "no larvae"))
+pglsres.edmass.all.exp <- pglsres.edmass.all.exp %>%
+    mutate(Larval_Habitat = recode(Larval_Habitat, "no larva" = "no larvae"))
+
+# Define a colorblind-friendly vector of colors for adult habitat, activity period, larval habitat, and development mode
+col_hab <- c("aquatic" = "#0072B2",
+             "subfossorial" = "#CC79A7",
+             "terrestrial" = "#E69F00",
+             "semiaquatic" = "#56B4E9",
+             "scansorial" = "#009E73")
+col_act <- c("both" = "deeppink3",
+             "diurnal" = "darkgoldenrod1", 
+             "nocturnal" = "blueviolet")
+col_larv <- c("lentic water" = "royalblue1", 
+         "lotic water" = "skyblue1",
+         "no larvae" = "lightcoral",
+         "both" = "forestgreen")
+col_dev <- c("metamorphosing" = "darkturquoise", 
+         "paedomorphic" = "black",
+         "development" = "#332288")
+
+# Make a vector of point shapes for adult habitat
+shape_hab <- c("aquatic" = 25,
+             "scansorial" = 24,
+             "semiaquatic" = 15,
+             "subfossorial" = 16,
+             "terrestrial" = 18)
+```
+
+# Binary Habitat States
+
+We recategorized our species data into binary habitat categories used by Huang et al, a study of frog corneal eye size. We looked at if eye size and investment differed across these categories.
+
+```{r}
+# Group habitat type into binary categories used by Huang et al.
+pglsres.cdmass.all$Habitat_Group <- ifelse(pglsres.cdmass.all$Adult_Habitat %in% c("aquatic", "semiaquatic"), "Aq/S", "T/Ar")
+# Group habitat type into binary categories used by Huang et al.
+pglsres.cdsvl.all$Habitat_Group <- ifelse(pglsres.cdsvl.all$Adult_Habitat %in% c("aquatic", "semiaquatic"), "Aq/S", "T/Ar")
+# Group habitat type into binary categories used by Huang et al.
+pglsres.edmass.all$Habitat_Group <- ifelse(pglsres.edmass.all$Adult_Habitat %in% c("aquatic", "semiaquatic"), "Aq/S", "T/Ar")
+# Group habitat type into binary categories used by Huang et al.
+pglsres.edsvl.all$Habitat_Group <- ifelse(pglsres.edsvl.all$Adult_Habitat %in% c("aquatic", "semiaquatic"), "Aq/S", "T/Ar")
+
+# boxplot of cornea size vs adult habitat
+abscor.habitat <- ggplot(data=pglsres.cdmass.all, aes(x = Habitat_Group, y = cor_av)) +
+  geom_boxplot(notch = FALSE, outlier.shape = NA) +
+  stat_summary(fun.y = mean, colour="black", geom="point", 
+               shape=18, size=3, show_guide = FALSE) +
+  geom_jitter(aes(text = Genus_Species, color = Adult_Habitat), 
+              shape = 19, size = 1.3, alpha = 0.7, position = position_jitter(0.15)) +
+  theme(text = element_text(size=14), panel.background = element_blank(), axis.line = element_line(colour = "black")) +
+  theme(axis.text = element_text(angle = 0, size = 9)) +
+  ylab("Cornea diameter (mm)") +
+  xlab("Binary habitat") +
+  scale_color_manual(values = col_hab) +  # Use the color vector for manual color coloring based on Adult_Habitat
+  theme(legend.position = "none")
+#print plot
+abscor.habitat
+
+pglsres.cdmass.all$Habitat_Group <- ifelse(pglsres.cdmass.all$Adult_Habitat %in% c("aquatic", "semiaquatic"), "Aq/S", "T/Ar")
+
+# boxplot of eye size vs adult habitat
+abseye.habitat <- ggplot(data=pglsres.cdmass.all, aes(x = Habitat_Group, y = eye_av)) +
+  geom_boxplot(notch = FALSE, outlier.shape = NA) +
+  stat_summary(fun.y = mean, colour="black", geom="point", 
+               shape=18, size=3, show_guide = FALSE) +
+  geom_jitter(aes(text = Genus_Species, color = Adult_Habitat), 
+              shape = 19, size = 1.3, alpha = 0.7, position = position_jitter(0.15)) +
+  theme(text = element_text(size=14), panel.background = element_blank(), axis.line = element_line(colour = "black")) +
+  theme(axis.text = element_text(angle = 0, size = 9)) +
+  ylab("Eye diameter (mm)") +
+  xlab("Binary habitat") +
+  scale_color_manual(values = col_hab) +  # Use the color vector for manual color coloring based on Adult_Habitat
+  theme(legend.position = "none")
+#print plot
+abseye.habitat
+
+# boxplot of cornea investment by mass vs adult habitat
+cdmass.habitat <- ggplot(data=pglsres.cdmass.all, aes(x = Habitat_Group, y = pglsres.cdmass)) +
+  geom_boxplot(notch = FALSE, outlier.shape = NA) +
+  stat_summary(fun.y = mean, colour="black", geom="point", 
+               shape=18, size=3, show_guide = FALSE) +
+  geom_jitter(aes(text = Genus_Species, color = Adult_Habitat), 
+              shape = 19, size = 1.3, alpha = 0.7, position = position_jitter(0.15)) +
+  theme(text = element_text(size=14), panel.background = element_blank(), axis.line = element_line(colour = "black")) +
+  theme(axis.text = element_text(angle = 0, size = 9)) +
+  ylab("Cornea investment (mass)") +
+  xlab("Binary habitat") +
+  scale_color_manual(values = col_hab) +  # Use the color vector for manual color coloring based on Adult_Habitat
+  theme(legend.position = "none")
+#print plot
+cdmass.habitat
+
+# boxplot of cornea investment by svl vs adult habitat
+cdsvl.habitat <- ggplot(data=pglsres.cdsvl.all, aes(x = Habitat_Group, y = pglsres.cdsvl)) +
+  geom_boxplot(notch = FALSE, outlier.shape = NA) +
+  stat_summary(fun.y = mean, colour="black", geom="point", 
+               shape=18, size=3, show_guide = FALSE) +
+  geom_jitter(aes(text = Genus_Species, color = Adult_Habitat), 
+              shape = 19, size = 1.3, alpha = 0.7, position = position_jitter(0.15)) +
+  theme(text = element_text(size=14), panel.background = element_blank(), axis.line = element_line(colour = "black")) +
+  theme(axis.text = element_text(angle = 0, size = 9)) +
+  ylab("Cornea investment (SVL)") +
+  xlab("Binary habitat") +
+  scale_color_manual(values = col_hab) +  # Use the color vector for manual color coloring based on Adult_Habitat
+  theme(legend.position = "none")
+#print plot
+cdsvl.habitat
+
+# boxplot of eye investment by mass vs adult habitat
+edmass.habitat <- ggplot(data=pglsres.edmass.all, aes(x = Habitat_Group, y = pglsres.edmass)) +
+  geom_boxplot(notch = FALSE, outlier.shape = NA) +
+  stat_summary(fun.y = mean, colour="black", geom="point", 
+               shape=18, size=3, show_guide = FALSE) +
+  geom_jitter(aes(text = Genus_Species, color = Adult_Habitat), 
+              shape = 19, size = 1.3, alpha = 0.7, position = position_jitter(0.15)) +
+  theme(text = element_text(size=14), panel.background = element_blank(), axis.line = element_line(colour = "black")) +
+  theme(axis.text = element_text(angle = 0, size = 9)) +
+  ylab("Eye investment (mass)") +
+  xlab("Binary habitat") +
+  scale_color_manual(values = col_hab) +  # Use the color vector for manual color coloring based on Adult_Habitat
+  theme(legend.position = "none")
+#print plot
+edmass.habitat
+
+# boxplot of eye investment by svl vs adult habitat
+edsvl.habitat <- ggplot(data=pglsres.edsvl.all, aes(x = Habitat_Group, y = pglsres.edsvl)) +
+  geom_boxplot(notch = FALSE, outlier.shape = NA) +
+  stat_summary(fun.y = mean, colour="black", geom="point", 
+               shape=18, size=3, show_guide = FALSE) +
+  geom_jitter(aes(text = Genus_Species, color = Adult_Habitat), 
+              shape = 19, size = 1.3, alpha = 0.7, position = position_jitter(0.15)) +
+  theme(text = element_text(size=14), panel.background = element_blank(), axis.line = element_line(colour = "black")) +
+  theme(axis.text = element_text(angle = 0, size = 9)) +
+  ylab("Eye investment (SVL)") +
+  xlab("Binary habitat") +
+  scale_color_manual(values = col_hab) +  # Use the color vector for manual color coloring based on Adult_Habitat
+  theme(legend.position = "none")
+#print plot
+edsvl.habitat
+
+# Export plot to pdf 
+ggsave("../Plots/binary.abscor.boxplot.pdf", plot = abscor.habitat, device = "pdf")
+ggsave("../Plots/binary.abseye.boxplot.pdf", plot = abseye.habitat, device = "pdf")
+ggsave("../Plots/binary.cdmass.boxplot.pdf", plot = cdmass.habitat, device = "pdf")
+ggsave("../Plots/binary.cdsvl.boxplot.pdf", plot = cdsvl.habitat, device = "pdf")
+ggsave("../Plots/binary.edmass.boxplot.pdf", plot = edmass.habitat, device = "pdf")
+ggsave("../Plots/binary.edsvl.boxplot.pdf", plot = edsvl.habitat, device = "pdf")
+
+```
+
+Here we create boxplots comparing eye and cornea size/investment and each of the 4 ecological traits. 
+
+## Cornea size and investment across adult habitats
+
+```{r habit-box, results = "hide"}
+
+# Boxplot of cornea diameter vs adult habitat
+adult_habitat.abs <- ggplot(data = filter(pglsres.cdmass.all.exp, !is.na(Adult_Habitat)), aes(x = reorder(Adult_Habitat, cor_av, FUN = mean), y = cor_av)) +
+  geom_boxplot(notch = FALSE, outlier.shape = NA, alpha = 0.5, lwd = 1.2) +
+  stat_summary(fun.y = mean, color = "black", geom = "point", size = 8, shape = 18, show_guide = FALSE) +
+  geom_jitter(aes(text = Genus_Species, shape = Adult_Habitat, color = Adult_Habitat), shape = 19, alpha = 0.5, size = 5, position = position_jitter(0.1)) +
+  scale_y_continuous(breaks = c(1, 2, 4, 6),
+                     limits = c(0.85, 6.1)) +
+  scale_color_manual(values = col_hab) + 
+  ylab("mean cornea diameter (mm)") +
+  xlab("adult habit") +
+  theme(
+    text = element_text(size = 20),
+    axis.title = element_text(size = 33), 
+    axis.text = element_text(size = 27),  
+    axis.ticks = element_line(size = 1.2), 
+    panel.background = element_blank(),
+    axis.line = element_line(colour = "black", size = 1.1),
+    legend.position = "none"
+  ) +
+  theme(
+    axis.text.x = element_blank(),
+    axis.ticks.x = element_blank(),
+    axis.text.y = element_text(size = 27),
+    axis.ticks = element_line(colour = "black", size = 1),
+    axis.ticks.length = unit(0.25, "cm")
+  )
+plot(adult_habitat.abs)
+
+# Boxplot of cornea investment (by mass) vs adult habitat
+adult_habitat.inv <- ggplot(data = filter(pglsres.cdmass.all.exp, !is.na(Adult_Habitat)), aes(x = reorder(Adult_Habitat, pglsres.cdmass, FUN = mean), y = pglsres.cdmass)) +
+  geom_boxplot(notch = FALSE, outlier.shape = NA, alpha = 0.5, lwd = 1.2) +  
+  stat_summary(fun.y = mean, color = "black", geom = "point", size = 8, shape = 18, show_guide = FALSE) +
+  geom_jitter(aes(text = Genus_Species, shape = Adult_Habitat, color = Adult_Habitat), shape = 19, alpha = 0.5, size = 5, position = position_jitter(0.1)) +
+  scale_color_manual(values = col_hab) + 
+  scale_y_continuous(labels = function(x) paste0(x, "x"),
+                     breaks = c(0.5, 1, 1.5, 2),
+                     limits = c(0.45, 2.05)) +
+  ylab("cornea investment (mass)") +
+  xlab("adult habit") +
+  theme(
+    text = element_text(size = 20),
+    axis.title = element_text(size = 33), 
+    axis.text = element_text(size = 27),  
+    axis.ticks = element_line(size = 1.2), 
+    panel.background = element_blank(),
+    axis.line = element_line(colour = "black", size = 1.1),
+    legend.position = "none"
+  ) +
+  theme(
+    axis.text.x = element_blank(),
+    axis.ticks.x = element_blank(),
+    axis.text.y = element_text(size = 27),
+    axis.ticks = element_line(colour = "black", size = 1),
+    axis.ticks.length = unit(0.25, "cm")
+  )
+plot(adult_habitat.inv)
+
+# Boxplot of cornea investment (by SVL) vs adult habitat
+adult_habitat.invsvl <- ggplot(data = filter(pglsres.cdsvl.all.exp, !is.na(Adult_Habitat)), aes(x = reorder(Adult_Habitat, pglsres.cdsvl, FUN = mean), y = pglsres.cdsvl)) +
+  geom_boxplot(notch = FALSE, outlier.shape = NA, alpha = 0.5, lwd = 1.2) +
+  stat_summary(fun.y = mean, color = "black", geom = "point", size = 8, shape = 18, show_guide = FALSE) +
+  geom_jitter(aes(text = Genus_Species, shape = Adult_Habitat, color = Adult_Habitat), shape = 19, alpha = 0.5, size = 5, position = position_jitter(0.1)) +
+   scale_color_manual(values = col_hab) + 
+  scale_y_continuous(labels = function(x) paste0(x, "x"),
+                     breaks = c(0.5, 1, 1.5, 2),
+                     limits = c(0.45, 2.05)) +
+  ylab("cornea investment (SVL)") +
+  xlab("adult habit") +
+  theme(
+    text = element_text(size = 20),
+    axis.title = element_text(size = 33), 
+    axis.text = element_text(size = 27),  
+    axis.ticks = element_line(size = 1.2), 
+    panel.background = element_blank(),
+    axis.line = element_line(colour = "black", size = 1.1),
+    legend.position = "none"
+  ) +
+  theme(
+    axis.text.x = element_blank(),
+    axis.ticks.x = element_blank(),
+    axis.text.y = element_text(size = 27),
+    axis.ticks = element_line(colour = "black", size = 1),
+    axis.ticks.length = unit(0.25, "cm")
+  )
+plot(adult_habitat.invsvl)
+
+# Boxplot of eye investment (by mass) vs adult habitat
+adult_habitat.edinv <- ggplot(data = filter(pglsres.edmass.all.exp, !is.na(Adult_Habitat)), aes(x = reorder(Adult_Habitat, pglsres.edmass, FUN = mean), y = pglsres.edmass)) +
+  geom_boxplot(notch = FALSE, outlier.shape = NA, alpha = 0.5, lwd = 1.2) +  
+  stat_summary(fun.y = mean, color = "black", geom = "point", size = 8, shape = 18, show_guide = FALSE) +
+  geom_jitter(aes(text = Genus_Species, shape = Adult_Habitat, color = Adult_Habitat), shape = 19, alpha = 0.5, size = 5, position = position_jitter(0.1)) +
+  scale_color_manual(values = col_hab) + 
+  scale_y_continuous(
+    labels = function(x) paste0(x, "x"),
+    breaks = c(0.55, 0.80, 1.05, 1.3),
+    limits = c(0.54, 1.32)) +
+  ylab("eye investment (mass)") +
+  xlab("adult habit") +
+  theme(
+    text = element_text(size = 20),
+    axis.title = element_text(size = 33), 
+    axis.text = element_text(size = 27),  
+    axis.ticks = element_line(size = 1.2), 
+    panel.background = element_blank(),
+    axis.line = element_line(colour = "black", size = 1.1),
+    legend.position = "none"
+  ) +
+  theme(
+    axis.text.x = element_blank(),
+    axis.ticks.x = element_blank(),
+    axis.text.y = element_text(size = 27),
+    axis.ticks = element_line(colour = "black", size = 1),
+    axis.ticks.length = unit(0.25, "cm")
+  )
+plot(adult_habitat.edinv)
+
+# Look at the plot with the plotly package - you can hover over data points to see what each species is, great way to check outliers!
+#ggplotly(adult_habitat.abs)
+#ggplotly(adult_habitat.inv)
+#ggplotly(adult_habitat.invsvl)
+#ggplotly(adult_habitat.edinvmass)
+
+# Save the plots as square-shaped PDFs
+ggsave("../Plots/adulthabitat.abs.boxplot.pdf", plot = adult_habitat.abs, device = "pdf", width = 7.5, height = 8)
+ggsave("../Plots/adulthabitat.invmass.boxplot.pdf", plot = adult_habitat.inv, device = "pdf", width = 7.5, height = 8)
+ggsave("../Plots/adulthabitat.invsvl.boxplot.pdf", plot = adult_habitat.invsvl, device = "pdf", width = 7.5, height = 8)
+ggsave("../Plots/adulthabitat.edinv.boxplot.pdf", plot = adult_habitat.edinv, device = "pdf", width = 7.5, height = 8)
+```
+
+## Cornea size and investment by activity period
+
+```{r act-box, results = "hide"}
+ 
+# Boxplot of cornea diameter vs activity period
+activity_period.abs <- ggplot(data = filter(pglsres.cdmass.all.exp, !is.na(Activity_Period)), aes(x = reorder(Activity_Period, cor_av, FUN = mean), y = cor_av)) +
+  geom_boxplot(notch = FALSE, outlier.shape = NA, alpha = 0.5, lwd = 1.2) +
+  stat_summary(fun.y = mean, color = "black", geom = "point", size = 8, shape = 18, show_guide = FALSE) +
+  geom_jitter(aes(text = Genus_Species, shape = Activity_Period, color = Activity_Period), shape = 19, alpha = 0.5, size = 5, position = position_jitter(0.1)) +
+  scale_y_continuous(breaks = c(1, 2, 4, 6),
+                     limits = c(0.85, 6.1)) +
+  scale_color_manual(values = col_act) + 
+  ylab("cornea diameter (mm)") +
+  xlab("activity period") +
+   theme(
+    text = element_text(size = 20),
+    axis.title = element_text(size = 33), 
+    axis.text = element_text(size = 27),  
+    axis.ticks = element_line(size = 1.2), 
+    panel.background = element_blank(),
+    axis.line = element_line(colour = "black", size = 1.1),
+    legend.position = "none"
+  ) +
+  theme(
+    axis.text.x = element_blank(),
+    axis.ticks.x = element_blank(),
+    axis.text.y = element_text(size = 27),
+    axis.ticks = element_line(colour = "black", size = 1),
+    axis.ticks.length = unit(0.25, "cm")
+  )
+plot(activity_period.abs)
+
+# Boxplot of cornea investment (by mass) vs activity period
+activity_period.inv <- ggplot(data = filter(pglsres.cdmass.all.exp, !is.na(Activity_Period)), aes(x = reorder(Activity_Period, pglsres.cdmass, FUN = mean), y = pglsres.cdmass)) +
+  geom_boxplot(notch = FALSE, outlier.shape = NA, alpha = 0.5, lwd = 1.2) +
+  stat_summary(fun.y = mean, color = "black", geom = "point", shape = 18, size = 8, show_guide = FALSE) +
+  geom_jitter(aes(text = Genus_Species, shape = Activity_Period, color = Activity_Period), shape = 19, alpha = 0.5, size = 5, position = position_jitter(0.1)) +
+  scale_color_manual(values = col_act) + 
+  scale_y_continuous(
+    labels = function(x) paste0(x, "x"),
+    breaks = c(0.5, 1, 1.5, 2),
+    limits = c(0.45, 2.05)) +
+  ylab("cornea investment (mass)") +
+  xlab("activity period") +
+  theme(
+    text = element_text(size = 20),
+    axis.title = element_text(size = 33), 
+    axis.text = element_text(size = 27),  
+    axis.ticks = element_line(size = 1.2), 
+    panel.background = element_blank(),
+    axis.line = element_line(colour = "black", size = 1.1),
+    legend.position = "none"
+  ) +
+  theme(
+    axis.text.x = element_blank(),
+    axis.ticks.x = element_blank(),
+    axis.text.y = element_text(size = 27),
+    axis.ticks = element_line(colour = "black", size = 1),
+    axis.ticks.length = unit(0.25, "cm")
+  )
+plot(activity_period.inv)
+
+# Boxplot of cornea investment (by SVL) vs activity period
+activity_period.invsvl <- ggplot(data = filter(pglsres.cdsvl.all.exp, !is.na(Activity_Period)), aes(x = reorder(Activity_Period, pglsres.cdsvl, FUN = mean), y = pglsres.cdsvl)) +
+  geom_boxplot(notch = FALSE, outlier.shape = NA, alpha = 0.5, lwd = 1.2) +
+  stat_summary(fun.y = mean, color = "black", geom = "point", shape = 18, size = 8, show_guide = FALSE) +
+  geom_jitter(aes(text = Genus_Species, shape = Activity_Period, color = Activity_Period), shape = 19, alpha = 0.5, size = 5, position = position_jitter(0.1)) +
+scale_color_manual(values = col_act) + 
+  scale_y_continuous(
+    labels = function(x) paste0(x, "x"),
+    breaks = c(0.5, 1, 1.5, 2),
+    limits = c(0.45, 2.05)) +
+  ylab("cornea investment (SVL)") +
+  xlab("activity period") +
+  theme(
+    text = element_text(size = 20),
+    axis.title = element_text(size = 33), 
+    axis.text = element_text(size = 27),  
+    axis.ticks = element_line(size = 1.2), 
+    panel.background = element_blank(),
+    axis.line = element_line(colour = "black", size = 1.1),
+    legend.position = "none"
+  ) +
+  theme(
+    axis.text.x = element_blank(),
+    axis.ticks.x = element_blank(),
+    axis.text.y = element_text(size = 27),
+    axis.ticks = element_line(colour = "black", size = 1),
+    axis.ticks.length = unit(0.25, "cm")
+  )
+plot(activity_period.invsvl)
+
+# Boxplot of eye investment (by mass) vs activity pattern
+activity_period.edinv <- ggplot(data = filter(pglsres.edmass.all.exp, !is.na(Activity_Period)), aes(x = reorder(Activity_Period, pglsres.edmass, FUN = mean), y = pglsres.edmass)) +
+  geom_boxplot(notch = FALSE, outlier.shape = NA, alpha = 0.5, lwd = 1.2) +  
+  stat_summary(fun.y = mean, color = "black", geom = "point", size = 8, shape = 18, show_guide = FALSE) +
+  geom_jitter(aes(text = Genus_Species, shape = Activity_Period, color = Activity_Period), shape = 19, alpha = 0.5, size = 5, position = position_jitter(0.1)) +
+  scale_color_manual(values = col_act) + 
+  scale_y_continuous(
+    labels = function(x) paste0(x, "x"),
+    breaks = c(0.55, 0.80, 1.05, 1.3),
+    limits = c(0.54, 1.32)) +
+  ylab("eye investment (mass)") +
+  xlab("activity period") +
+  theme(
+    text = element_text(size = 20),
+    axis.title = element_text(size = 33), 
+    axis.text = element_text(size = 27),  
+    axis.ticks = element_line(size = 1.2), 
+    panel.background = element_blank(),
+    axis.line = element_line(colour = "black", size = 1.1),
+    legend.position = "none"
+  ) +
+  theme(
+    axis.text.x = element_blank(),
+    axis.ticks.x = element_blank(),
+    axis.text.y = element_text(size = 27),
+    axis.ticks = element_line(colour = "black", size = 1),
+    axis.ticks.length = unit(0.25, "cm")
+  )
+plot(activity_period.edinv)
+
+# Look at the plot with the plotly package - you can hover over data points to see what each species is, great way to check outliers!
+#ggplotly(activity_period.abs)
+#ggplotly(activity_period.inv)
+#ggplotly(activity_period.invsvl)
+#ggplotly(activity_period.edinv)
+
+# Export plot to pdf 
+ggsave("../Plots/activityperiod.abs.boxplot.pdf", plot = activity_period.abs, device = "pdf", width = 7.5, height = 8)
+ggsave("../Plots/activityperiod.invmass.boxplot.pdf", plot = activity_period.inv, device = "pdf", width = 7.5, height = 8)
+ggsave("../Plots/activityperiod.invsvl.boxplot.pdf", plot = activity_period.invsvl, device = "pdf", width = 7.5, height = 8)
+ggsave("../Plots/activityperiod.edinv.boxplot.pdf", plot = activity_period.edinv, device = "pdf", width = 7.5, height = 8)
+```
+
+## Cornea size and investment by larval habitat
+
+```{r larv-box, results = "hide"}
+
+# Boxplot of cornea diameter vs larval habitat
+larval_habitat.abs <- ggplot(data = filter(pglsres.cdmass.all.exp, !is.na(Larval_Habitat)), aes(x = reorder(Larval_Habitat, cor_av, FUN = mean), y = cor_av)) +
+  geom_boxplot(notch = FALSE, outlier.shape = NA, alpha = 0.5, lwd = 1.2) +
+  stat_summary(fun.y = mean, color = "black", geom = "point", size = 8, shape = 18, show_guide = FALSE) +
+  geom_jitter(aes(text = Genus_Species, shape = Larval_Habitat, color = Larval_Habitat), shape = 19, alpha = 0.5, size = 5, position = position_jitter(0.1)) +
+  scale_y_continuous(breaks = c(1, 2, 4, 6),
+                     limits = c(0.85, 6.1)) +
+  scale_color_manual(values = col_larv) + 
+  ylab("cornea diameter (mm)") +
+  xlab("larval habitat") +
+   theme(
+    text = element_text(size = 20),
+    axis.title = element_text(size = 33), 
+    axis.text = element_text(size = 27),  
+    axis.ticks = element_line(size = 1.2), 
+    panel.background = element_blank(),
+    axis.line = element_line(colour = "black", size = 1.1),
+    legend.position = "none"
+  ) +
+  theme(
+    axis.text.x = element_blank(),
+    axis.ticks.x = element_blank(),
+    axis.text.y = element_text(size = 27),
+    axis.ticks = element_line(colour = "black", size = 1),
+    axis.ticks.length = unit(0.25, "cm")
+  )
+plot(larval_habitat.abs)
+
+# Boxplot of cornea investment (by mass) vs larval habitat
+larval_habitat.inv <- ggplot(data = filter(pglsres.cdmass.all.exp, !is.na(Larval_Habitat)), aes(x = reorder(Larval_Habitat, pglsres.cdmass, FUN = mean), y = pglsres.cdmass)) +
+  geom_boxplot(notch = FALSE, outlier.shape = NA, alpha = 0.5, lwd = 1.2) +
+  stat_summary(fun.y = mean, color = "black", geom = "point", shape = 18, size = 8, show_guide = FALSE) +
+  geom_jitter(aes(text = Genus_Species, shape = Larval_Habitat, color = Larval_Habitat), shape = 19, alpha = 0.5, size = 5, position = position_jitter(0.1)) +
+  scale_color_manual(values = col_larv) + 
+  scale_y_continuous(
+    labels = function(x) paste0(x, "x"),
+    breaks = c(0.5, 1, 1.5, 2),
+    limits = c(0.45, 2.05)) +
+  ylab("cornea investment (mass)") +
+  xlab("larval habitat") +
+  theme(
+    text = element_text(size = 20),
+    axis.title = element_text(size = 33), 
+    axis.text = element_text(size = 27),  
+    axis.ticks = element_line(size = 1.2), 
+    panel.background = element_blank(),
+    axis.line = element_line(colour = "black", size = 1.1),
+    legend.position = "none"
+  ) +
+  theme(
+    axis.text.x = element_blank(),
+    axis.ticks.x = element_blank(),
+    axis.text.y = element_text(size = 27),
+    axis.ticks = element_line(colour = "black", size = 1),
+    axis.ticks.length = unit(0.25, "cm")
+  )
+plot(larval_habitat.inv)
+
+# Boxplot of cornea investment (by SVL) vs larval habitat
+larval_habitat.invsvl <- ggplot(data = filter(pglsres.cdsvl.all.exp, !is.na(Larval_Habitat)), aes(x = reorder(Larval_Habitat, pglsres.cdsvl, FUN = mean), y = pglsres.cdsvl)) +
+  geom_boxplot(notch = FALSE, outlier.shape = NA, alpha = 0.5, lwd = 1.2) +
+  stat_summary(fun.y = mean, color = "black", geom = "point", shape = 18, size = 8, show_guide = FALSE) +
+  geom_jitter(aes(text = Genus_Species, shape = Larval_Habitat, color = Larval_Habitat), shape = 19, alpha = 0.5, size = 5, position = position_jitter(0.1)) +
+scale_color_manual(values = col_larv) + 
+  scale_y_continuous(
+    labels = function(x) paste0(x, "x"),
+    breaks = c(0.5, 1, 1.5, 2),
+    limits = c(0.45, 2.05)) +
+  ylab("cornea investment (SVL)") +
+  xlab("larval habitat") +
+  theme(
+    text = element_text(size = 20),
+    axis.title = element_text(size = 33), 
+    axis.text = element_text(size = 27),  
+    axis.ticks = element_line(size = 1.2), 
+    panel.background = element_blank(),
+    axis.line = element_line(colour = "black", size = 1.1),
+    legend.position = "none"
+  ) +
+  theme(
+    axis.text.x = element_blank(),
+    axis.ticks.x = element_blank(),
+    axis.text.y = element_text(size = 27),
+    axis.ticks = element_line(colour = "black", size = 1),
+    axis.ticks.length = unit(0.25, "cm")
+  )
+plot(larval_habitat.invsvl)
+
+# Boxplot of eye investment (by mass) vs larval habitat
+larval_habitat.edinv <- ggplot(data = filter(pglsres.edmass.all.exp, !is.na(Larval_Habitat)), aes(x = reorder(Larval_Habitat, pglsres.edmass, FUN = mean), y = pglsres.edmass)) +
+  geom_boxplot(notch = FALSE, outlier.shape = NA, alpha = 0.5, lwd = 1.2) +  
+  stat_summary(fun.y = mean, color = "black", geom = "point", size = 8, shape = 18, show_guide = FALSE) +
+  geom_jitter(aes(text = Genus_Species, shape = Larval_Habitat, color = Larval_Habitat), shape = 19, alpha = 0.5, size = 5, position = position_jitter(0.1)) +
+  scale_color_manual(values = col_larv) + 
+  scale_y_continuous(
+    labels = function(x) paste0(x, "x"),
+    breaks = c(0.55, 0.80, 1.05, 1.3),
+    limits = c(0.54, 1.32)) +
+  ylab("eye investment (mass)") +
+  xlab("larval habitat") +
+  theme(
+    text = element_text(size = 20),
+    axis.title = element_text(size = 33), 
+    axis.text = element_text(size = 27),  
+    axis.ticks = element_line(size = 1.2), 
+    panel.background = element_blank(),
+    axis.line = element_line(colour = "black", size = 1.1),
+    legend.position = "none"
+  ) +
+  theme(
+    axis.text.x = element_blank(),
+    axis.ticks.x = element_blank(),
+    axis.text.y = element_text(size = 27),
+    axis.ticks = element_line(colour = "black", size = 1),
+    axis.ticks.length = unit(0.25, "cm")
+  )
+plot(larval_habitat.edinv)
+
+# Look at the plot with the plotly package 
+#ggplotly(larval_habitat.abs)
+#ggplotly(larval_habitat.inv)
+#ggplotly(larval_habitat.invsvl)
+#ggplotly(larval_habitat.edinv)
+
+# Export plot to pdf 
+ggsave("../Plots/larvalhabitat.abs.boxplot.pdf", plot = larval_habitat.abs, device = "pdf", width = 7.5, height = 8)
+ggsave("../Plots/larvalhabitat.invmass.boxplot.pdf", plot = larval_habitat.inv, device = "pdf", width = 7.5, height = 8)
+ggsave("../Plots/larvalhabitat.invsvl.boxplot.pdf", plot = larval_habitat.invsvl, device = "pdf", width = 7.5, height = 8)
+ggsave("../Plots/larvalhabitat.edinv.boxplot.pdf", plot = larval_habitat.edinv, device = "pdf", width = 7.5, height = 8)
+```
+
+## Cornea size and investment by development status of aquatic species
+
+```{r dev-box, results = "hide"}
+
+# Filtering out only aquatic species into a new dataset
+aquatic_species <- pglsres.cdmass.all.exp %>%
+  filter(Adult_Habitat == "aquatic")
+aquatic_species.svl <- pglsres.cdsvl.all.exp %>%
+  filter(Adult_Habitat == "aquatic")
+aquatic_species.ed <- pglsres.edmass.all.exp %>%
+  filter(Adult_Habitat == "aquatic")
+
+# Boxplot of cornea diameter vs paedomorphic/metamorphosizing status
+aquaticdevelopment.abs <- ggplot(data = filter(aquatic_species, !is.na(Development)), aes(x = reorder(Development, cor_av, FUN = mean), y = cor_av)) +
+  geom_boxplot(notch = FALSE, outlier.shape = NA, alpha = 0.5, lwd = 1.2) +
+  stat_summary(fun.y = mean, color = "black", geom = "point", size = 8, shape = 18, show_guide = FALSE) +
+  geom_jitter(aes(text = Genus_Species, shape = Development, color = Development), shape = 19, alpha = 0.5, size = 5, position = position_jitter(0.1)) +
+  scale_y_continuous(breaks = c(1, 2, 3, 4),
+                     limits = c(0.9, 4.3)) +
+  scale_color_manual(values = col_dev) + 
+  ylab("cornea diameter (mm)") +
+  xlab("development mode") +
+   theme(
+    text = element_text(size = 20),
+    axis.title = element_text(size = 33), 
+    axis.text = element_text(size = 27),  
+    axis.ticks = element_line(size = 1.2), 
+    panel.background = element_blank(),
+    axis.line = element_line(colour = "black", size = 1.1),
+    legend.position = "none"
+  ) +
+  theme(
+    axis.text.x = element_blank(),
+    axis.ticks.x = element_blank(),
+    axis.text.y = element_text(size = 27),
+    axis.ticks = element_line(colour = "black", size = 1),
+    axis.ticks.length = unit(0.25, "cm")
+  )
+plot(aquaticdevelopment.abs)
+
+# Boxplot of cornea investment (by mass) vs paedomorphic/metamorphosizing status
+aquaticdevelopment.inv <- ggplot(data = filter(aquatic_species, !is.na(Development)), aes(x = reorder(Development, pglsres.cdmass, FUN = mean), y = pglsres.cdmass)) +
+  geom_boxplot(notch = FALSE, outlier.shape = NA, alpha = 0.5, lwd = 1.2) +
+  stat_summary(fun.y = mean, color = "black", geom = "point", shape = 18, size = 8, show_guide = FALSE) +
+  geom_jitter(aes(text = Genus_Species, shape = Development, color = Development), shape = 19, alpha = 0.5, size = 5, position = position_jitter(0.1)) +
+  scale_color_manual(values = col_dev) + 
+  scale_y_continuous(
+    labels = function(x) paste0(x, "x"),
+    breaks = c(0.5, 0.75, 1, 1.25, 1.5),
+    limits = c(0.48, 1.53)) +
+  ylab("cornea investment (mass)") +
+  xlab("development mode") +
+  theme(
+    text = element_text(size = 20),
+    axis.title = element_text(size = 33), 
+    axis.text = element_text(size = 27),  
+    axis.ticks = element_line(size = 1.2), 
+    panel.background = element_blank(),
+    axis.line = element_line(colour = "black", size = 1.1),
+    legend.position = "none"
+  ) +
+  theme(
+    axis.text.x = element_blank(),
+    axis.ticks.x = element_blank(),
+    axis.text.y = element_text(size = 27),
+    axis.ticks = element_line(colour = "black", size = 1),
+    axis.ticks.length = unit(0.25, "cm")
+  )
+plot(aquaticdevelopment.inv)
+
+# Boxplot of cornea investment (by SVL) vs paedomorphic/metamorphosizing status
+aquaticdevelopment.invsvl <- ggplot(data = filter(aquatic_species.svl, !is.na(Development)), aes(x = reorder(Development, pglsres.cdsvl, FUN = mean), y = pglsres.cdsvl)) +
+  geom_boxplot(notch = FALSE, outlier.shape = NA, alpha = 0.5, lwd = 1.2) +
+  stat_summary(fun.y = mean, color = "black", geom = "point", shape = 18, size = 8, show_guide = FALSE) +
+  geom_jitter(aes(text = Genus_Species, shape = Development, color = Development), shape = 19, alpha = 0.5, size = 5, position = position_jitter(0.1)) +
+scale_color_manual(values = col_dev) + 
+  scale_y_continuous(
+    labels = function(x) paste0(x, "x"),
+    breaks = c(0.5, 0.75, 1, 1.25, 1.5),
+    limits = c(0.48, 1.53)) +
+  ylab("cornea investment (SVL)") +
+  xlab("development mode") +
+  theme(
+    text = element_text(size = 20),
+    axis.title = element_text(size = 33), 
+    axis.text = element_text(size = 27),  
+    axis.ticks = element_line(size = 1.2), 
+    panel.background = element_blank(),
+    axis.line = element_line(colour = "black", size = 1.1),
+    legend.position = "none"
+  ) +
+  theme(
+    axis.text.x = element_blank(),
+    axis.ticks.x = element_blank(),
+    axis.text.y = element_text(size = 27),
+    axis.ticks = element_line(colour = "black", size = 1),
+    axis.ticks.length = unit(0.25, "cm")
+  )
+plot(aquaticdevelopment.invsvl)
+
+# Look at the plot with the plotly package 
+#ggplotly(aquaticdevelopment.abs)
+#ggplotly(aquaticdevelopment.mass)
+#ggplotly(aquaticdevelopment.svl)
+
+# Export plot to pdf 
+ggsave("../Plots/aquaticdevelopment.abs.boxplot.pdf", plot = aquaticdevelopment.abs, device = "pdf", width = 7.5, height = 8)
+ggsave("../Plots/aquaticdevelopment.mass.boxplot.pdf", plot = aquaticdevelopment.inv, device = "pdf", width = 7.5, height = 8)
+ggsave("../Plots/aquaticdevelopment.svl.boxplot.pdf", plot = aquaticdevelopment.invsvl, device = "pdf", width = 7.5, height = 8)
+```
+
+## Boxplots for Figure 1
+
+The plots below are coded for optimal size and clarity to be saved for the final Figure 1.
+
+```{r fig-one, results = "hide"}
+
+# Boxplot of cornea investment (by mass) vs adult habitat
+adult_habitat.inv <- ggplot(data = filter(pglsres.cdmass.all.exp, !is.na(Adult_Habitat)), aes(x = reorder(Adult_Habitat, pglsres.cdmass, FUN = mean), y = pglsres.cdmass)) +
+  geom_boxplot(aes(fill = Adult_Habitat), notch = FALSE, outlier.shape = NA, alpha = 0.5, lwd = 0.9) +  
+  stat_summary(aes(shape = Adult_Habitat, fill = Adult_Habitat), fun.y = mean, geom = "point", size = 3.5, color = "black") +
+  geom_jitter(aes(text = Genus_Species, shape = Adult_Habitat, fill = "black"), color = "black", alpha = 0.5, size = 1.6, position = position_jitter(0.1)) +
+  scale_shape_manual(values = c(
+    "aquatic" = 25,  # Upside-down triangle
+    "subfossorial" = 21,  # Circle
+    "terrestrial" = 23,  # Diamond
+    "semiaquatic" = 22,  # Square
+    "scansorial" = 24  # Triangle
+  )) +
+  scale_fill_manual(values = col_hab) +
+  scale_y_continuous(labels = function(x) paste0(x, "x")) +
+  ylab("cornea investment (mass)") +
+  xlab("adult habit") +
+  theme(
+    text = element_text(size = 20),
+    axis.title = element_text(size = 34), 
+    axis.text = element_text(size = 30),  
+    axis.ticks = element_line(size = 1.2), 
+    panel.background = element_blank(),
+    axis.line = element_line(colour = "black", size = 1),
+    legend.position = "none"
+  ) +
+  scale_x_discrete(labels = c("Aq", "Su", "Te", "Se", "Sc")) +
+  theme(
+    axis.text.x = element_text(angle = 0, hjust = 0.5, vjust = 0.5),
+    axis.text.y = element_text(size = 30),
+    axis.ticks = element_line(colour = "black", size = 1),
+    axis.ticks.length = unit(0.25, "cm")
+  )
+plot(adult_habitat.inv)
+
+# Boxplot of pgls residuals by mass vs. paedomorphic/metamorphosizing status
+aquaticdevelopment.mass <- ggplot(data = aquatic_species, aes(x = reorder(Development, pglsres.cdmass, FUN = mean), y = pglsres.cdmass)) +
+  geom_boxplot(notch = FALSE, outlier.shape = NA, alpha = 0.5, lwd = 0.9, width = 0.5) +
+  stat_summary(aes(shape = Development), fun.y = mean, color = "black", geom = "point", size = 3.5) +
+  geom_jitter(aes(text = Genus_Species, shape = Development, fill = "black"), color = "black", alpha = 0.5, size = 1.6, position = position_jitter(0.05)) +
+  scale_shape_manual(values = c(
+    "paedomorphic" = 24,  # Triangle
+    "metamorphosing" = 21 # Circle
+    )) +  
+scale_fill_manual(values = col_dev) +
+  scale_y_continuous(labels = function(x) paste0(x, "x"), 
+                     limits = c(0.5, 1.5), 
+                     expand = c(0.01, 0.01)) +
+  ylab("cornea investment (Aq only)") +
+  xlab("development mode") +
+  theme(
+    text = element_text(size = 20),
+    panel.background = element_blank(),
+    axis.line = element_line(colour = "black", size = 1),
+    axis.title = element_text(size = 34), 
+    axis.text = element_text(size = 30),  
+    axis.ticks = element_line(color = "black", size = 1.2), 
+    legend.position = "none",
+    axis.text.x = element_text(angle = 0, hjust = 0.5, vjust = 0.5),
+    axis.text.y = element_text(size = 30),
+    axis.ticks.length = unit(0.25, "cm")
+  ) +
+  scale_x_discrete(labels = c("Pa", "Me")) +
+  theme(axis.text.x = element_text(angle = 0, hjust = 0.5, vjust = 0.5))
+plot(aquaticdevelopment.mass)
+
+# Export plots to pdf 
+ggsave("../Plots/hab.inv.pdf", plot = adult_habitat.inv, device = "pdf", width = 8, height = 8)
+ggsave("../Plots/aquatic.inv.pdf", plot = aquaticdevelopment.mass, device = "pdf", width = 6, height = 8)
+```

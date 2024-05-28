@@ -1,7 +1,7 @@
 ---
 title: "Tidying Data"
-author: "Nicole Bednarik & Katie Thomas"
-date: 4 March 2024
+author: "Nicole Bednarik & Kate Thomas"
+date: 28 May 2024
 output:
   html_document:
     theme: flatly
@@ -33,7 +33,7 @@ We recorded 6 morphological measurements from each salamander specimen: snout-ve
 ```{r load-data}
 
 # Load raw data for measured salamander specimens
-salamanders_morph <- data.frame(read.csv("../Data/Raw/salamanders_measurements_new.csv", header=TRUE, na.strings=c("", "NA", " ","<1")))
+salamanders_morph <- data.frame(read.csv("../Data/Raw/salamanders_measurements.csv", header=TRUE, na.strings=c("", "NA", " ","<1")))
 
 # Tidy dataset for analysis
 salamanders.subset <- salamanders_morph %>%
@@ -45,23 +45,16 @@ salamanders.subset <- salamanders_morph %>%
 
 ## Ecological traits
 
-We coded 6 ecological traits for each species from published literature into binary categories, and then merged this data with our specimen measurements by genus and species. 
+We coded for 4 ecological traits (adult habitat, activity period, development mode, larval habitat) for each species from published literature, and then merged this data with our specimen measurements by genus and species. 
 
 Note that for one species (_Pleurodeles waltl_), both a gilled and an ungilled specimen were measured. The ungilled specimen is labelled as Pleurodeles_waltl, and the gilled as Pleurodeles_waltl_gilled in the Genus_Species column. 
 
 ```{r trait-data, results = "hide"}
 
-#Import BINARY ecological trait data with blank cells reading as NA
-traits_bi <- data.frame(read.csv("../Data/Raw/salamanders_traits_binary.csv", na.strings = c("", " "))) 
+# Import ecological trait data with blank cells reading as NA
+traits <- data.frame(read.csv("../Data/Raw/salamanders_traits.csv", na.strings = c("", " "))) 
 
-#keep only relevent columns for merging
-traits_bi.subset <- traits_bi %>%
-  dplyr::select(-one_of(c("X","Order","Suborder","Family","Subfamily", "Genus","Species")))
-
-#Import CATEGORICAL ecological trait data with blank cells reading as NA
-traits <- data.frame(read.csv("../Data/Raw/salamanders_traits_all.csv", na.strings = c("", " "))) 
-
-#keep only relevent columns for merging
+# Keep only relevant columns for merging
 traits.subset <- traits %>%
   dplyr::select(-one_of(c("X","Order","Suborder","Family","Subfamily", "Genus","Species")))
 ```
@@ -71,41 +64,41 @@ traits.subset <- traits %>%
 
 Here, we merge the morphological data with the trait data. We then export the merged, tidied dataset to use with our analyses. Because the two morphs of P. waltl are coded in the species column, we can merge by species.
 
-```{r}
+```{r merged-data, results = "hide"}
+
 # Merge morphology dataset with ecological trait dataset
-# binary ecologies
-salamanders_bi <- merge(salamanders.subset, traits_bi.subset, by="Genus_Species", 
-                   all.x = TRUE, all.y = FALSE)
-#categorical ecologies (main dataframe that will be used)
 salamanders <- merge(salamanders.subset, traits.subset, by="Genus_Species", 
                    all.x = TRUE, all.y = FALSE)
 
 # Check structure of final dataframe for analyses (numbers and factors in proper columns)
-str(salamanders_bi)
 str(salamanders)
 
 # Export tidied dataset for analyses
-write.csv(salamanders_bi, file = "../Data/Tidy/salamandersbinary_tidy.csv")
 write.csv(salamanders, file = "../Data/Tidy/salamanders_tidy.csv")
 ```
 
 ## Sampling
 
-We sampled all 10 extant caudata families, and morphological sampling for interspecific analysis ranged from n = 1 to n = 6 individuals for each species (based on availability in the collections).
+We sampled all 10 extant caudata families, and morphological sampling for interspecific analysis ranged from n = 1 to n = 7 individuals for each species (based on availability in the collections). Note that the gilled Pleurodeles waltl specimen is included in the count for Pleurodeles waltl in Table S1 in supplementary material.
 
 ```{r sampling, results = "hide"}
 
-#Number of species and individuals sampled 
+# Number of species and individuals sampled 
 counts <-ddply(salamanders, .(salamanders$Family, salamanders$Genus, salamanders$Species), nrow)
 names(counts) <- c("Family","Genus","Species","Sampled")
 
-#create scrolling RMarkdown table of sampling
-kable(counts[ , c("Family","Genus","Species","Sampled")], caption = "Species and sampling effort for morphological data from museum specimens.") %>%
+# Merge Genus and Species columns
+counts <- counts %>%
+  mutate(Genus_Species = paste(Genus, Species)) %>%
+  select(Family, Genus_Species, Sampled)
+
+# Create scrolling RMarkdown table of sampling
+kable(counts, caption = "Species and sampling effort for morphological data from museum specimens.") %>%
   kable_styling(full_width = F) %>%
   collapse_rows(columns = 1, valign = "top") %>%
   scroll_box(height = "500px")
 
-#export sampling data for supplement
+# Export sampling data for supplement
 write.csv(counts, file = "../Data/Tidy/sampling.csv")
 
 ```
