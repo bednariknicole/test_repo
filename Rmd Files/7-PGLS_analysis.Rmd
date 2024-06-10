@@ -25,6 +25,10 @@ library(gtable)
 library(cowplot)
 library(knitr)
 library(tidyverse)
+library(car)
+library(multcomp)
+install.packages("dunn.test")
+library(dunn.test)
 
 # Markdown settings
 knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE, fig.height = 4.5, fig.width=8)
@@ -75,12 +79,15 @@ aquatic.comp$dropped$tips
 
 ## Testing for differences in eye size across ecological states
 
-First we check if data for eye size and eye investment across ecological states is normally distributed. pglsres.cdmass is the variable for the cornea diameter ~ mass residuals.
+### Assumptions
+
+First we check if data for eye size and eye investment across ecological states is normally distributed and that there are equal variances across samples. 
 
 ```{r}
 
 # Testing Assumptions
 
+# EYE SIZE
 # Create a QQ plot 
 qqnorm(pglsres.cdmass.all$eye_av)
 qqline(pglsres.cdmass.all$eye_av)
@@ -88,7 +95,10 @@ qqline(pglsres.cdmass.all$eye_av)
 hist(pglsres.cdmass.all$eye_av, main = "Histogram of Eye Size")
 # Check the normality 
 shapiro.test(pglsres.cdmass.all$eye_av)
+# Check equality of variances
+leveneTest(eye_av ~ Adult_Habitat, data = pglsres.cdmass.all)
 
+#CORNEA SIZE
 # Create a QQ plot 
 qqnorm(pglsres.cdmass.all$cor_av)
 qqline(pglsres.cdmass.all$cor_av)
@@ -96,7 +106,10 @@ qqline(pglsres.cdmass.all$cor_av)
 hist(pglsres.cdmass.all$cor_av, main = "Histogram of Cornea Size")
 # Check the normality
 shapiro.test(pglsres.cdmass.all$cor_av)
+# Check equality of variances
+leveneTest(cor_av ~ Adult_Habitat, data = pglsres.cdmass.all)
 
+#SQUARE ROOT OF MASS
 # Create a QQ plot 
 qqnorm(pglsres.cdmass.all$rootmass_av)
 qqline(pglsres.cdmass.all$rootmass)
@@ -104,7 +117,10 @@ qqline(pglsres.cdmass.all$rootmass)
 hist(pglsres.cdmass.all$rootmass, main = "Histogram of Root Mass")
 # Check the normality 
 shapiro.test(pglsres.cdmass.all$rootmass)
+# Check equality of variances
+leveneTest(rootmass_av ~ Adult_Habitat, data = pglsres.cdmass.all)
 
+#RESIDUALS OF CORNEA SIZE~ROOTMASS
 # Create a QQ plot 
 qqnorm(pglsres.cdmass.all$pglsres.cdmass)
 qqline(pglsres.cdmass.all$pglsres.cdmass)
@@ -112,17 +128,15 @@ qqline(pglsres.cdmass.all$pglsres.cdmass)
 hist(pglsres.cdmass.all$pglsres.cdmass, main = "Histogram of cornea ~ mass residuals")
 # Check the normality 
 shapiro.test(pglsres.cdmass.all$pglsres.cdmass)
-
-# Levene's Test for homogeneity of variances across groups
-leveneTest(pglsres.cdmass.all$pglsres.cdmass ~ pglsres.cdmass.all$Adult_Habitat)
+# Check equality of variances
+leveneTest(pglsres.cdmass ~ Adult_Habitat, data = pglsres.cdmass.all)
 ```
+
 Data for eye size and investment across ecological groups were not normally distributed, so we used non-parametric statistical tests for comparing data between ecological groups. 
 
-??We used Kruskal-Wallis tests to test for differences in means across ecological groups, which is a non-parametric alternative to a one-way ANOVA test that uses ranks. 
+?We used Kruskal-Wallis tests to test for differences in means across ecological groups, which is a non-parametric alternative to a one-way ANOVA test that uses ranks. 
 
-When the Kruskal-Wallis test indicated that means differed across ecological groups and there were more than two groups, we used post-hoc Pairwise Wilcoxen Rank Sum Tests to caluclate pairwise comparisons between group levels with corrections for mulitple testing. This is a non-parametric alternative to a Tukey test that uses ranks to test for differences in means.
-
-^^what was done in anuran paper. do above, or just a linear regression with residuals versus adult habitat and then run anova?
+When the Kruskal-Wallis test indicated that means differed across ecological groups and there were more than two groups, we used post-hoc Pairwise Wilcoxen Rank Sum Tests to calculate pairwise comparisons between group levels with corrections for multiple testing. This is a non-parametric alternative to a Tukey test that uses ranks to test for differences in means.
 
 # Habitat PGLS
 
@@ -185,21 +199,50 @@ kable(anova(pgls_hab2), digits = 3, caption= "ANOVA Table for cornea size ~ mass
 #intercept and slope
 summary(pgls_hab2)
 ```
+# Linear regression for cornea investment vs. adult habitat
+```{r}
+
+# Change Adult_Habitat to a factor with levels
+pglsres.cdmass.all$Adult_Habitat <- factor(pglsres.cdmass.all$Adult_Habitat, levels = c("aquatic", "subfossorial", "terrestrial", "semiaquatic", "scansorial")) 
+
+# Fit lineaar regression model for (absolute) cornea size and adult habitat
+habitat.regression <- lm(cor_av ~ Adult_Habitat, data = pglsres.cdmass.all)
+summary(habitat.regression)
+anova(habitat.regression)
+
+# Tukey's HSD test for pairwise comparisons betweens levels of Adult Habitat
+tukey_abs <- glht(habitat.regression, linfct = mcp(Adult_Habitat = "Tukey"))
+summary(tukey_abs)
+
+# Fit lineaar regression model for relative cornea size and adult habitat
+habitat.regression.1 <- lm(pglsres.cdmass ~ Adult_Habitat, data = pglsres.cdmass.all)
+summary(habitat.regression.1)
+anova(habitat.regression.1)
+
+# Tukey's HSD test for pairwise comparisons between levels of Adult Habitat
+tukey_inv <- glht(habitat.regression, linfct = mcp(Adult_Habitat = "Tukey"))
+```
+
 # Kruskal Wallis Test for cornea investment vs. adult habitat 
 
 ```{r}
-# Test for differences in mean (absolute) eye size across habitat groups: Kruskal-Wallis test
-kruskal.test(eye_av ~ Adult_Habitat, data = pglsres.cdmass.all) 
+# Test for differences in mean (absolute) cornea size across habitat groups: Kruskal-Wallis test
+kruskal.test(cor_av ~ Adult_Habitat, data = pglsres.cdmass.all) 
 
-# Mulitple comparisons for differences in mean (absolute) eye size across habitat groups: Pairwise Wilcoxon rank sum tests
-pairwise.wilcox.test(pglsres.cdmass.all$eye_av, pglsres.cdmass.all$Adult_Habitat, p.adjust.method = "bonferroni")
+# Multiple comparisons for differences in mean (absolute) cornea size across habitat groups: Pairwise Wilcox rank sum tests
+pairwise.wilcox.test(pglsres.cdmass.all$cor_av, pglsres.cdmass.all$Adult_Habitat, p.adjust.method = "bonferroni")
 
-# Test for differences relative eye size (by mass) across habitat groups: Kruskal-Wallis test
+# Multiple comparisons for differences in mean (absolute) cornea size across habitat groups: Dunn's post hoc test
+dunn.test.abs <- dunn.test(pglsres.cdmass.all$cor_av, pglsres.cdmass.all$Adult_Habitat, method = "bonferroni")
+
+# Test for differences relative cornea size (by mass) across habitat groups: Kruskal-Wallis test
 kruskal.test(pglsres.cdmass ~ Adult_Habitat, data = pglsres.cdmass.all) 
 
-# Mulitple comparisons for differences in eye investment (by mass) across habitat groups: Pairwise Wilcoxon rank sum tests
+# Multiple comparisons for differences in cornea investment (by mass) across habitat groups: Pairwise Wilcox rank sum tests
 pairwise.wilcox.test(pglsres.cdmass.all$pglsres.cdmass, pglsres.cdmass.all$Adult_Habitat, p.adjust.method = "bonferroni")
 
+# Multiple comparisons for differences in mean (absolute) cornea size across habitat groups: Dunn's post hoc test
+dunn.test.inv <- dunn.test(pglsres.cdmass.all$pglsres.cdmass, pglsres.cdmass.all$Adult_Habitat, method = "bonferroni")
 ```
 
 # Linear Regression and ANOVA

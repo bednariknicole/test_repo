@@ -47,6 +47,11 @@ caudata_raw <- read.csv("../Data/Tidy/salamanders_tidy.csv", header=TRUE, na.str
   # Remove blind salamanders from dataset
   filter(Genus_Species != "Eurycea_rathbuni" & Genus_Species != "Proteus_anguinus")
 
+# Load salamander data that includes blind salamanders (for Figure 1 for paper)
+caudata_raw_blind <- read.csv("../Data/Tidy/salamanders_tidy.csv", header=TRUE, na.strings=c("", "NA", " ")) %>%
+  # Remove the gilled version of Pleurodeles_waltl
+  filter(Genus_Species != "Pleurodeles_waltl_gilled")
+
 # Check out structure
 str(caudata_raw)
 
@@ -54,9 +59,13 @@ str(caudata_raw)
 tip_species <- caudata_raw %>% 
   dplyr::select(Genus_Species, Family) %>%
   unique()
+tip_species_blind <- caudata_raw_blind %>%
+  dplyr::select(Genus_Species, Family) %>%
+  unique()
 
 # Check for duplicates of species
 n_occur <- data.frame(table(tip_species$Genus_Species))
+n_occur_blind <- data.frame(table(tip_species_blind$Genus_Species))
 ```
 
 # Load published phylogeny
@@ -87,7 +96,6 @@ is.ultrametric(tree)
 
 # Plot tree
 plot.phylo(tree, show.tip.label = F)
-
 ```
 
 # Match names in tree and phylogeny
@@ -98,7 +106,7 @@ First, we find species that are in our dataset that aren't found as exact matche
 
 # Find species in dataset that don't exist as phylogeny tip label
 tip_species[which(!tip_species$Genus_Species %in% as.vector(tree$tip.label)), ]
-
+tip_species_blind[which(!tip_species_blind$Genus_Species %in% as.vector(tree$tip.label)), ]
 ```
 
 There is 1 species that doesn't appear in the phylogeny, _Aneides niger_. We can look for a synonym or close relative in the phylogeny tips. 
@@ -127,7 +135,7 @@ tree_graft2 <- bind.tip(tree = tree_graft,
                         where = bind.node)
 ```
 
-Now we can check that our names in the dataset are matching those in the phylogeny. Now that we've consolidated subspecies into species, we have 155 species with data that we want to match the tree. 
+Now we can check that our names in the dataset are matching those in the phylogeny. Now that we've consolidated subspecies into species, we have 155 species with data that we want to match the tree (157 species for the second phylogeny that will include 2 blind salamander species).
 
 ```{r tree-match, results = "hide"}
 
@@ -135,8 +143,12 @@ Now we can check that our names in the dataset are matching those in the phyloge
 rownames(tip_species) <- tip_species$Genus_Species
 overlap <- name.check(tree_graft2, tip_species)
 
+rownames(tip_species_blind) <- tip_species_blind$Genus_Species
+overlap_blind <- name.check(tree_graft2, tip_species_blind)
+
 # Species in data that aren't matching tree
 overlap$data_not_tree
+overlap_blind$data_not_tree
 ```
 
 All the species are now matching! Now we prune the tree to match the species in our dataset. 
@@ -145,12 +157,15 @@ All the species are now matching! Now we prune the tree to match the species in 
 
 # Make list of taxa to drop (in tree but not in dataset)
 drops <- setdiff(tree_graft2$tip.label, tip_species$Genus_Species)
+drops_blind <- setdiff(tree_graft2$tip.label, tip_species_blind$Genus_Species)
 
 # Drop unwanted tips from phylogeny
 tree.pruned <- drop.tip(phy = tree_graft2, tip = drops) 
+tree.pruned_blind <- drop.tip(phy = tree_graft2, tip = drops_blind) 
 
 # See which tips you've kept in your phylogeny
 tree.pruned$tip.label
+tree.pruned_blind$tip.label
   
 # Check that phylogeny tips and data match exactly (if they match will return "OK")
 name.check(tree.pruned, names)
@@ -162,7 +177,7 @@ The pruned tree tip labels and the dataset species names match exactly. We can p
 
 # Plot pruned tree with polytomies
 plot.phylo(tree.pruned, show.tip.label = TRUE)
-
+plot.phylo(tree.pruned_blind, show.tip.label = TRUE)
 ```
 
 We also check that the tree is still rooted and ultrametric. 
@@ -171,9 +186,11 @@ We also check that the tree is still rooted and ultrametric.
 
 # Confirm that tree is rooted
 is.rooted(tree.pruned) 
+is.rooted(tree.pruned_blind)
 
 # Check that tree is still ultrametric
 is.ultrametric(tree.pruned)
+is.ultrametric(tree.pruned_blind)
 ```
 
 Finally, because we added a polytomy our tree will not be binary. For analyses, we will need it to be, so we can randomly resolve polytomies by adding in tiny differences so that we can use statistical methods like PGLS. 
@@ -182,13 +199,15 @@ Finally, because we added a polytomy our tree will not be binary. For analyses, 
 
 # Test whether tree is dichotomous (shouldn't be yet)
 is.binary(tree.pruned)
+is.binary(tree.pruned_blind)
 
 # Randomly resolve polytomies to make tree dichotomous using multi2di function in ape
 dich.tree <- multi2di(tree.pruned)
+dich.tree_blind <- multi2di(tree.pruned_blind)
 
 # Check that tree is now binary
 is.binary(dich.tree)
-
+is.binary(dich.tree_blind)
 ```
 
 The tree is now dichotomous. We will take one final look at the tree to check that it looks ok and then export as a nexus file for use in our analyses. 
@@ -197,12 +216,17 @@ The tree is now dichotomous. We will take one final look at the tree to check th
 
 # Plot final tree
 plot.phylo(dich.tree, show.tip.label = TRUE)
+# Plot final tree (with blind species)
+plot.phylo(dich.tree_blind, show.tip.label = TRUE)
 ```
 
 Looks good! Now we export. 
 
 ```{r, results = "hide"}
+
 # Export final tree
 write.nexus(dich.tree, file = "../Data/Tidy/caudata-tree.nex")
+# Export final tree (with blind salamanders)
+write.nexus(dich.tree_blind, file = "../Data/Tidy/caudata-tree-blind.nex")
 ```
 
