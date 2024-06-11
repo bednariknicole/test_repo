@@ -1,0 +1,598 @@
+---
+title: "Comparison of salamander eye size with other vertebrate groups"
+author: "Katie Thomas & Nicole Bednarik"
+date: 10 June 2024
+output:
+  html_document:
+    theme: flatly
+    toc: TRUE
+    toc_float: TRUE
+    code_fold: show
+---
+
+```{r setup, include = FALSE}
+
+# Load package libraries
+library(plyr)
+library(smatr)
+library(picante)
+library(nlme)
+library(ape)
+library(evobiR)
+library(geiger)
+library(caper)
+library(phytools)
+library(phylotools)
+library(plotly)
+library(kableExtra)
+library(gridExtra)
+library(ggimage)
+library(ggtree)
+library(grid)
+library(gtable)
+library(cowplot)
+library(knitr)
+library(mvMORPH)
+library(tidyverse)
+
+# Markdown settings
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE, fig.height = 4.5, fig.width=8)
+
+```
+
+# Import data and phylogenies
+
+## Frogs
+
+```{r load-data}
+
+# Morphology data 
+
+# Frog data (From Thomas et al. 2020 Proc B)
+frog_morph <- data.frame(read.csv("../Data/Thomas et al. 2020/Data/frogs_analysis.csv", header=TRUE, na.strings=c("", "NA", " ")))
+
+# Tidy data
+frogs <- frog_morph %>%
+  mutate(rootmass = Mass_g^(1/3)) %>%  
+  mutate(eyemean = rowMeans(frog_morph[c('ED_right_mm', 'ED_left_mm')], na.rm=TRUE)) %>% 
+  mutate(cormean = rowMeans(frog_morph[c('CD_right_mm', 'CD_left_mm')], na.rm=TRUE)) %>%  
+  mutate(eyemean = na_if(eyemean, NaN)) %>% 
+  mutate(cormean = na_if(cormean, NaN)) %>% 
+  select(Order, genus_species, mod_tiplabel, SVL_mm, rootmass, eyemean, cormean) 
+
+# Frog tree (from Jetz & Pyron, as modified in Thomas et al. 2020 Proc B)
+
+# Read tree
+frog.tree <- read.nexus(file = "../Data/Thomas et al. 2020/Data/frog-tree.nex")
+
+#check that tree is dichotomous
+is.binary(frog.tree)
+
+#plot tree
+plot.phylo(frog.tree, show.tip.label = FALSE)
+```
+
+## Salamanders
+
+```{r load-salamanders}
+
+# Import tidied salamander eye size and trait data
+av.sal <- data.frame(read.csv("../Data/Tidy/salamanders_averages.csv", header=TRUE, na.strings=c("", "NA", " ","<1")))
+
+# Import pruned phylogeny
+caudatatree <- read.nexus("../Data/Tidy/caudata-tree.nex")
+```
+
+## Fishes
+```{r load-fishes}
+
+# Load vertebrate eye size data assembled from literature
+vert_morph <- data.frame(read.csv("../Data/Thomas et al. 2020/Data/other verts/vertebrate_eyesize.csv", header=TRUE, na.strings=c("", "NA", " ")))
+
+# Tidy data
+vert_morph <- vert_morph %>%
+  mutate(rootmass = (Body_mass_kg*1000)^(1/3)) %>%
+  filter(!(is.na(VertLife_name)&is.na(TimeTree_tiplabel)&is.na(TimeTree_genus_sub))) %>%
+  mutate_if(is.character, as.factor)
+
+# Pull out fishes
+fishes <- vert_morph[vert_morph$Group == "Fishes (Actinopterygii)", ]
+
+# Species means for fishes
+fishes_avs <- fishes %>% 
+  mutate(tips = coalesce(TimeTree_tiplabel, TimeTree_genus_sub)) %>% 
+  mutate_if(is.character, as.factor) %>% 
+  group_by(tips) %>%
+  summarise(TD_av = mean(Trans_diameter_mm),
+            mass_av = mean(rootmass), 
+            svl_av = mean(SVL_mm),
+            n = n())
+
+# Fish phylogeny
+fishes.phy <- read.newick(file = "../Data/Thomas et al. 2020/Data/other verts/vertebrate_trees/TimeTree_fishes.nwk") 
+
+# Check that tree is dichotomous
+is.binary(fishes.phy)
+
+# Plot tree
+plot.phylo(fishes.phy, show.tip.label = FALSE)
+
+```
+
+## Squamates
+```{r load-squamates}
+
+# Squamate data
+squamates <- vert_morph[vert_morph$Group == "Reptiles (Squamata)", ]
+
+# Species means
+squamate_avs <- squamates %>% 
+  mutate(VertLife_name = gsub('\\s+', '_', VertLife_name)) %>%
+  mutate_if(is.character, as.factor) %>% 
+  group_by(VertLife_name, Subgroup) %>%
+  summarise(TD_av = mean(Trans_diameter_mm),
+            CD_av = mean(Cornea_diameter_mm),
+            mass_av = mean(rootmass), 
+            svl_av = mean(SVL_mm),
+            n = n()) %>%
+  droplevels()
+
+# Squamate phylogeny
+
+# Read tree
+squamate.phy <- read.tree(file = "../Data/Thomas et al. 2020/Data/other verts/vertebrate_trees/VertLifesquamate_tree/Vert_Life_Squamate_consensus_tree.newick")
+  
+#check that tree is dichotomous
+is.binary(squamate.phy)
+
+#make dichotomous (randomly resolve polytomies)
+squamate.phy <- multi2di(squamate.phy)
+
+#plot tree
+plot.phylo(squamate.phy, show.tip.label = FALSE)
+```
+
+
+
+# Cornea diameter vs. mass
+
+## Frogs
+
+```{r frog-means}
+
+# Find species means for cornea diameter vs. rootmass
+frogs.cdmass <- frogs %>% 
+  mutate_if(is.character, as.factor) %>% 
+  filter(!(is.na(cormean) | is.na(rootmass))) %>% 
+  group_by(genus_species, mod_tiplabel) %>%
+  summarise(cor_av = mean(cormean), mass_av = mean(rootmass), n = n()) %>%
+  mutate_if(is.factor, as.character)
+
+frogs.cdmass <- as.data.frame(frogs.cdmass)
+```
+
+Match data to tree & fit PGLS in caper
+
+```{r frog-PGLS}
+
+# Make row names of dataset the species names (so it will match phylogeny tips)
+rownames(frogs.cdmass) <- frogs.cdmass$mod_tiplabel
+
+# Check that names match in dataframe and tree
+name.check(phy = frog.tree, data = frogs.cdmass)
+
+# Use caper function to combine phylogeny and data into one object (this function also matches species names in tree and dataset)
+frog.cdmass.comp <- comparative.data(phy = frog.tree, data = frogs.cdmass, 
+                            names.col = mod_tiplabel, vcv = TRUE, 
+                            na.omit = FALSE, warn.dropped = TRUE)
+
+# Check for dropped tips or dropped species
+frog.cdmass.comp$dropped$tips #phylogeny
+frog.cdmass.comp$dropped$unmatched.rows #dataset
+
+# Run PGLS model
+pgls_frog.cdmass <- pgls(log10(cor_av) ~ log10(mass_av), 
+               data = frog.cdmass.comp, 
+               lambda = "ML", #uses Maximum Liklihood estimate of lambda
+               param.CI = 0.95)
+
+# Check model assumptions with diagnostic plots
+par(mar = c(4,4,2,2))
+par(mfrow = c(2, 2))
+plot(pgls_frog.cdmass)
+
+summary(pgls_frog.cdmass)
+
+```
+
+## Salamanders 
+
+```{r salamanders-PGLS}
+
+# Make row names of dataset the species names (so it will match phylogeny tips)
+rownames(av.sal) <- av.sal$Genus_Species
+
+# Check that names match in dataframe and tree
+name.check(phy = caudatatree, data = av.sal)
+
+# Use caper function to combine phylogeny and data into one object (this function also matches species names in tree and dataset)
+sal.comp <- comparative.data(phy = caudatatree, data = av.sal, 
+                            names.col = Genus_Species, vcv = TRUE, 
+                            na.omit = FALSE, warn.dropped = TRUE)
+
+# Check for dropped tips or dropped species
+sal.comp$dropped$tips #phylogeny
+sal.comp$dropped$unmatched.rows #dataset
+
+# Run PGLS model
+pgls_salamanders.cdmass <- pgls(log10(cor_av) ~ log10(rootmass_av), 
+               data = sal.comp, 
+               lambda = "ML", #uses Maximum Liklihood estimate of lambda
+               param.CI = 0.95)
+
+# Check model assumptions with diagnostic plots
+par(mar = c(4,4,2,2))
+par(mfrow = c(2, 2))
+plot(pgls_salamanders.cdmass)
+
+summary(pgls_salamanders.cdmass)
+```
+
+## Plot for cornea vs. mass
+
+```{r}
+
+# Color vector
+col_cdmass <- c("frogs" = "#009E73",
+            "salamanders" = "#9900ff")
+
+shape_cdmass <- c("frogs" = 19,
+                  "salamanders" = 15)
+
+#plot data
+plot_cdmass <- ggplot(frogs.cdmass, aes(x = mass_av, y = cor_av, color = "frogs", pch = "frogs")) +
+  geom_point(alpha = 0.5, size = 1) +
+  theme_bw() +
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), legend.text.align = 0) +
+  scale_y_log10(name = "Cornea diameter (mm)") +
+  scale_x_log10(name = "Cube root of mass (g)") +
+  geom_abline(slope = coef(pgls_frog.cdmass)[[2]], intercept = coef(pgls_frog.cdmass)[[1]], color = col_cdmass["frogs"]) +
+  #add salamanders to plot
+  geom_point(data = pglsres.cdmass.all, aes(x = rootmass_av, y = cor_av, color = "salamanders", pch = "salamanders"), alpha = 0.5, size = 1) +
+  geom_abline(slope = coef(pgls_salamanders.cdmass)[[2]], intercept = coef(pgls_salamanders.cdmass)[[1]], color = col_cdmass["salamanders"]) +
+  scale_color_manual(values = col_cdmass, name = "Group") +
+  scale_shape_manual(values = shape_cdmass, name = "Group")
+
+#show plot
+plot_cdmass
+```
+
+# Eye diameter vs. mass
+
+## Frogs
+
+```{r}
+
+# Find species means for eye diameter vs. rootmass
+frogs.edmass <- frogs %>% 
+  mutate_if(is.character, as.factor) %>% 
+  filter(!(is.na(eyemean) | is.na(rootmass))) %>% 
+  group_by(genus_species, mod_tiplabel) %>%
+  summarise(eye_av = mean(eyemean), mass_av = mean(rootmass), n = n()) %>%
+  mutate_if(is.factor, as.character)
+
+frogs.edmass <- as.data.frame(frogs.edmass)
+```
+
+Match data to tree & fit PGLS in caper
+
+```{r}
+
+# Make row names of dataset the species names (so it will match phylogeny tips)
+rownames(frogs.edmass) <- frogs.edmass$mod_tiplabel
+
+# Check that names match in dataframe and tree
+name.check(phy = frog.tree, data = frogs.edmass)
+
+# Use caper function to combine phylogeny and data into one object (this function also matches species names in tree and dataset)
+frog.edmass.comp <- comparative.data(phy = frog.tree, data = frogs.edmass, 
+                            names.col = mod_tiplabel, vcv = TRUE, 
+                            na.omit = FALSE, warn.dropped = TRUE)
+
+# Check for dropped tips or dropped species
+frog.edmass.comp$dropped$tips #phylogeny
+frog.edmass.comp$dropped$unmatched.rows #dataset
+
+# Run PGLS model
+pgls_frog.edmass <- pgls(log10(eye_av) ~ log10(mass_av), 
+               data = frog.edmass.comp, 
+               lambda = "ML", #uses Maximum Liklihood estimate of lambda
+               param.CI = 0.95)
+
+# Check model assumptions with diagnostic plots
+par(mar = c(4,4,2,2))
+par(mfrow = c(2, 2))
+plot(pgls_frog.edmass)
+
+summary(pgls_frog.edmass)
+```
+
+
+## Salamanders
+
+```{r}
+
+# Run PGLS model
+pgls_sal.edmass <- pgls(log10(eye_av) ~ log10(rootmass_av), 
+               data = sal.comp, 
+               lambda = "ML", #uses Maximum Liklihood estimate of lambda
+               param.CI = 0.95)
+
+#check model assumptions with diagnostic plots
+par(mar = c(4,4,2,2))
+par(mfrow = c(2, 2))
+plot(pgls_sal.edmass)
+
+summary(pgls_sal.edmass)
+```
+
+## Fishes
+
+Match data to tree & fit PGLS in caper
+
+```{r}
+
+# Make row names of dataset the species names (so it will match phylogeny tips)
+fishes_avs <- as.data.frame(fishes_avs)
+rownames(fishes_avs) <- fishes_avs$tips
+
+# Check that names match in dataframe and tree
+name.check(phy = fishes.phy, data = fishes_avs)
+
+# Use caper function to combine phylogeny and data into one object (this function also matches species names in tree and dataset)
+fishes.comp <- comparative.data(phy = fishes.phy, data = fishes_avs, 
+                            names.col = tips, vcv = TRUE, 
+                            na.omit = FALSE, warn.dropped = TRUE)
+
+# Check for dropped tips or dropped species
+fishes.comp$dropped$tips #phylogeny
+fishes.comp$dropped$unmatched.rows #dataset
+
+# Run PGLS model
+pgls_fish.edmass <- pgls(log10(TD_av) ~ log10(mass_av), 
+               data = fishes.comp, 
+               lambda = "ML", #uses Maximum Liklihood estimate of lambda
+               param.CI = 0.95)
+
+# Check model assumptions with diagnostic plots
+par(mar = c(4,4,2,2))
+par(mfrow = c(2, 2))
+plot(pgls_fish.edmass)
+
+summary(pgls_fish.edmass)
+```
+## Plot for eye vs. mass
+
+Note that the salamander eye size dataset is missing the species with the smallest eyes (those had cornea measurements only), so that pushes the regression line up quite a bit. 
+
+```{r}
+
+# Color vector
+col_ed <- c("frogs" = "#009E73",
+            "salamanders" = "#9900ff",
+            "fishes" = "#0066ff")
+
+shape_ed <- c("frogs" = 19,
+            "salamanders" = 15,
+            "fishes" = 17)
+
+# Plot data
+plot_edmass <- ggplot(frogs.edmass, aes(x = mass_av, y = eye_av, color = "frogs", pch = "frogs")) +
+  geom_point(alpha = 0.5, size = 1) +
+  theme_bw() +
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), legend.text.align = 0) +
+  scale_y_log10(name = "External eye diameter (mm)") +
+  scale_x_log10(name = "Cube root of mass (g)") +
+  geom_abline(slope = coef(pgls_frog.edmass)[[2]], intercept = coef(pgls_frog.edmass)[[1]], color = col_ed["frogs"]) +
+  #add salamanders to plot
+  geom_point(data = av.sal, aes(x = rootmass_av, y = eye_av, color = "salamanders", pch = "salamanders"), alpha = 0.5, size = 1) +
+  geom_abline(slope = coef(pgls_sal.edmass)[[2]], intercept = coef(pgls_sal.edmass)[[1]], color = col_ed["salamanders"]) +
+  #add fishes to plot
+  geom_point(data = fishes_avs, aes(x = mass_av, y = TD_av, color = "fishes", pch = "fishes"), alpha = 0.5, size = 1) +
+  geom_abline(slope = coef(pgls_fish.edmass)[[2]], intercept = coef(pgls_fish.edmass)[[1]], color = col_ed["fishes"]) +
+  scale_color_manual(values = col_ed, name = "Group") +
+  scale_shape_manual(values = shape_ed, name = "Group")
+
+#show plot
+plot_edmass
+```
+
+
+# Eye diameter vs. SVL
+
+## Frogs
+
+```{r}
+
+# Find species means for eye diameter vs svl
+frogs.edsvl <- frogs %>% 
+  mutate_if(is.character, as.factor) %>% 
+  filter(!(is.na(eyemean) | is.na(SVL_mm))) %>% 
+  group_by(genus_species, mod_tiplabel) %>%
+  summarise(eye_av = mean(eyemean), svl_av = mean(SVL_mm), n = n()) %>%
+  mutate_if(is.factor, as.character)
+
+frogs.edsvl <- as.data.frame(frogs.edsvl)
+```
+
+Match data to tree & fit PGLS in caper
+
+```{r}
+
+#Make row names of dataset the species names (so it will match phylogeny tips)
+rownames(frogs.edsvl) <- frogs.edsvl$mod_tiplabel
+
+#check that names match in dataframe and tree
+name.check(phy = frog.tree, data = frogs.edsvl)
+
+#use caper function to combine phylogeny and data into one object (this function also matches species names in tree and dataset)
+frog.edsvl.comp <- comparative.data(phy = frog.tree, data = frogs.edsvl, 
+                            names.col = mod_tiplabel, vcv = TRUE, 
+                            na.omit = FALSE, warn.dropped = TRUE)
+
+#check for dropped tips or dropped species
+frog.edsvl.comp$dropped$tips #phylogeny
+frog.edsvl.comp$dropped$unmatched.rows #dataset
+
+#run PGLS model
+pgls_frog.edsvl <- pgls(log10(eye_av) ~ log10(svl_av), 
+               data = frog.edsvl.comp, 
+               lambda = "ML", #uses Maximum Likelihood estimate of lambda
+               param.CI = 0.95)
+
+#check model assumptions with diagnostic plots
+par(mar = c(4,4,2,2))
+par(mfrow = c(2, 2))
+plot(pgls_frog.edsvl)
+
+summary(pgls_frog.edsvl)
+
+```
+
+
+
+
+## Salamanders
+
+```{r}
+
+# Run PGLS model
+pgls_sal.edsvl <- pgls(log10(eye_av) ~ log10(svl_av), 
+               data = sal.comp, 
+               lambda = "ML", #uses Maximum Liklihood estimate of lambda
+               param.CI = 0.95)
+
+# Check model assumptions with diagnostic plots
+par(mar = c(4,4,2,2))
+par(mfrow = c(2, 2))
+plot(pgls_sal.edsvl)
+
+summary(pgls_sal.edsvl)
+```
+
+## Squamates
+
+```{r}
+
+# Subset groups with eye size data
+squamate.ed <- squamate_avs %>%
+  filter(Subgroup=="colubrid snakes" | Subgroup=="geckos") %>%
+  droplevels()
+squamate.ed <- as.data.frame(squamate.ed)
+           
+# Make row names of dataset the species names (so it will match phylogeny tips)
+rownames(squamate.ed) <- squamate.ed$VertLife_name
+
+# Check that names match in dataframe and tree
+name.check(phy = squamate.phy, data = squamate.ed)
+
+# Use caper function to combine phylogeny and data into one object (this function also matches species names in tree and dataset)
+squam.edsvl.comp <- comparative.data(phy = squamate.phy, data = squamate.ed, 
+                            names.col = VertLife_name, vcv = TRUE, 
+                            na.omit = FALSE, warn.dropped = TRUE)
+
+# Check for dropped tips or dropped species
+squam.edsvl.comp$dropped$tips #phylogeny
+squam.edsvl.comp$dropped$unmatched.rows #dataset
+
+# Run PGLS model
+pgls_squam.edsvl <- pgls(log10(TD_av) ~ log10(svl_av) * Subgroup, 
+               data = squam.edsvl.comp, 
+               lambda = "ML", #uses Maximum Liklihood estimate of lambda
+               param.CI = 0.95)
+
+# Check model assumptions with diagnostic plots
+par(mar = c(4,4,2,2))
+par(mfrow = c(2, 2))
+plot(pgls_squam.edsvl)
+
+summary(pgls_squam.edsvl)
+```
+
+## Plot for eye vs. SVL
+
+Note that the salamander eye size dataset is missing the species with the smallest eyes (those had cornea measurements only), so that pushes the regression line up quite a bit. 
+
+```{r}
+
+# Color vector
+col_edsvl <- c("frogs" = "#009E73",
+            "salamanders" = "#9900ff",
+            "geckos" = "#FF9933",
+            "colubrid snakes" = "#FF3333")
+
+shape_edsvl <- c("frogs" = 19,
+            "salamanders" = 15,
+            "geckos" = 17,
+            "colubrid snakes" = 18)
+
+# Plot data
+plot_edsvl <- ggplot(frogs.edsvl, aes(x = svl_av, y = eye_av, color = "frogs", pch = "frogs")) +
+  geom_point(alpha = 0.5, size = 1) +
+  theme_bw() +
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), legend.text.align = 0) +
+  scale_y_log10(name = "External eye diameter (mm)") +
+  scale_x_log10(name = "Snout-vent length (mm)") +
+  geom_abline(slope = coef(pgls_frog.edsvl)[[2]], intercept = coef(pgls_frog.edsvl)[[1]], color = col_edsvl["frogs"]) +
+  #add salamanders to plot
+  geom_point(data = av.sal, aes(x = svl_av, y = eye_av, color = "salamanders", pch = "salamanders"), alpha = 0.5, size = 1) +
+  geom_abline(slope = coef(pgls_sal.edsvl)[[2]], intercept = coef(pgls_sal.edsvl)[[1]], color = col_edsvl["salamanders"]) +
+  #add squamates to plot
+  geom_point(data = squamate.ed, aes(x = svl_av, y = TD_av, color = Subgroup, pch = Subgroup), alpha = 0.5, size = 1) +
+  #snake line
+  geom_abline(slope = coef(pgls_squam.edsvl)[[2]], intercept = coef(pgls_squam.edsvl)[[1]], color = col_edsvl["colubrid snakes"]) +
+  #gecko line
+  geom_abline(slope = coef(pgls_squam.edsvl)[[2]] + coef(pgls_squam.edsvl)[[4]], 
+              intercept = coef(pgls_squam.edsvl)[[1]] + coef(pgls_squam.edsvl)[[3]], color = col_edsvl["geckos"]) +
+  scale_color_manual(values = col_edsvl, name = "Group") +
+  scale_shape_manual(values = shape_edsvl, name = "Group")
+
+# Show plot
+plot_edsvl
+```
+
+# Figure
+
+We can put these plots together to make a paneled figure
+
+```{r}
+
+# Make panels 
+fig.a <- plot_cdmass +
+  theme(text = element_text(size=10))
+
+fig.b <- plot_edmass +
+  theme(text = element_text(size=10))
+
+fig.c <- plot_edsvl +
+  theme(text = element_text(size=10))
+
+
+
+# Use cowplot package to nicely plot the graphs together with a shared common legend.
+plots <- plot_grid(fig.a, fig.b, fig.c, 
+                   align = 'vh', 
+                   hjust = -1, 
+                   vjust = 1,
+                   ncol = 2,
+                   rel_widths = c(1,1))
+
+# Show figure
+plots
+
+# Export pdf of figure
+pdf("../Plots/vert-comparison.pdf", width = 10, height = 5)
+plot_grid(plots)
+dev.off()
+```
+

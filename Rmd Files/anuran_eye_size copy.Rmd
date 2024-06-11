@@ -62,7 +62,7 @@ library(gtable)
 library(cowplot)
 library(knitr)
 library(mvMORPH)
-library(evomap)
+#library(evomap)
 library(tidyverse)
 
 # Markdown settings
@@ -147,12 +147,12 @@ We downloaded a 309-species phylogeny from Feng et al. (2019) and made a list of
 ```{r data-phylogeny, fig.height=50, fig.width=10}
 
 #Import list of species to remove and substitute in Feng tree
-changes <- data.frame(read.csv("../Data/phylosubs.csv", header=TRUE))
+changes <- data.frame(read.csv("../Data/Thomas et al. 2020/Data/phylosubs.csv", header=TRUE))
 drops <- as.character(changes$exclude) #create vector of taxa to drop from tree
 subs <- changes[ , c("tips_original", "tips_sub")] #create a dataframe with column 1 with all original tip labels, and column 2 with corresponding desired tip labels
 
 #Import full 309 species tree from  Feng et al. (2017) downloaded from Dryad
-tree_orig <- read.tree(file = "../Data/Chronogram_309sp.txt") #reads tree
+tree_orig <- read.tree(file = "../Data/Thomas et al. 2020/Data/Chronogram_309sp.txt") #reads tree
 
 #Drop species not included (as matches or substitutions) in our study
 tree_pruned <- drop.tip(phy = tree_orig, tip = drops) 
@@ -209,6 +209,9 @@ plot.phylo(frog.tree,
            use.edge.length = TRUE,
            edge.width = 1,
            label.offset = .02)
+
+#Export final tree
+write.nexus(frog.tree, file = "../Data/Thomas et al. 2020/Data/frog-tree.nex")
 ```
 
 # Interspecific allometry
