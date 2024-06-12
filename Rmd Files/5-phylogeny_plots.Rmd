@@ -34,6 +34,8 @@ library(cowplot)
 library(knitr)
 library(mvMORPH)
 library(tidyverse)
+library(dplyr)
+library(ggplot2)
 
 # Markdown settings
 knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE, fig.height = 4.5, fig.width=8)
@@ -73,14 +75,24 @@ Here we add two rows to the dataframe to include the two blind salamander specie
 ```{r}
 
 # Create new rows for blind salamanders
-Eurycea_rathbuni <- data.frame(X.1 = 156, Genus_Species = "Eurycea_rathbuni", X = 159, eye_av = NA, cor_av = NA, svl_av = 4.93, rootmass_av = 2.11, n = 3, Order = "Caudata", Suborder = "Salamandroidea", Family = "Plethodontidae", Genus = "Eurycea", Species = "rathbuni", Gill_Presence = "yes", Activity_Period = NA, Adult_Habitat = "aquatic", Development = "paedomorphic", Life_History = "free-living", Larval_Habitat = "lentic water", pglsres.cdmass = NA)
-Proteus_anguinus <- data.frame(X.1 = 157, Genus_Species = "Proteus_anguinus", X = 160, eye_av = NA, cor_av = NA, svl_av = 175.37, rootmass_av = 26.33, n = 3, Order = "Caudata", Suborder = "Salamandroidea", Family = "Proteidae", Genus = "Proteus", Species = "anguinus", Gill_Presence = "yes", Activity_Period = "nocturnal", Adult_Habitat = "aquatic", Development = "paedormophic", Life_History = "free-living", Larval_Habitat = "lentic water", pglsres.cdmass = NA)
-Eurycea_rathbuni <- data.frame(tip = "Eurycea_rathbuni", labels = "Eurycea rathbuni")
-Proteus_anguinus <- data.frame(tip = "Proteus_anguinus", labels = "Proteus anguinus")
+Eurycea_rathbuni <- data.frame(
+  X.1 = 156, Genus_Species = "Eurycea_rathbuni", X = 159, eye_av = NA, cor_av = NA, 
+  svl_av = 4.93, rootmass_av = 2.11, n = 3, Order = "Caudata", Suborder = "Salamandroidea", 
+  Family = "Plethodontidae", Genus = "Eurycea", Species = "rathbuni", Gill_Presence = "yes", 
+  Activity_Period = NA, Adult_Habitat = "aquatic", Development = "paedomorphic", 
+  Life_History = "free-living", Larval_Habitat = "lentic water", pglsres.cdmass = NA
+)
 
-# Step 3: Add the new rows to the existing dataframe
+Proteus_anguinus <- data.frame(
+  X.1 = 157, Genus_Species = "Proteus_anguinus", X = 160, eye_av = NA, cor_av = NA, 
+  svl_av = 175.37, rootmass_av = 26.33, n = 3, Order = "Caudata", Suborder = "Salamandroidea", 
+  Family = "Proteidae", Genus = "Proteus", Species = "anguinus", Gill_Presence = "yes", 
+  Activity_Period = "nocturnal", Adult_Habitat = "aquatic", Development = "paedomorphic", 
+  Life_History = "free-living", Larval_Habitat = "lentic water", pglsres.cdmass = NA
+)
+
+# Add the new rows to the existing dataframe
 pglsres.cdmass.all.exp.blind <- rbind(pglsres.cdmass.all.exp, Eurycea_rathbuni, Proteus_anguinus)
-labs <- rbind(labs, Eurycea_rathbuni, Proteus_anguinus)
 ```
 
 Next, we import two amphibian trees from Jetz and Pyron (2019) that have been pruned to match the salamander species in this dataset. One includes the two blind salamander species (Proteus anguinus and Eurycea rathbuni) and will be used to create Figure 1 for the paper.
@@ -112,11 +124,16 @@ First we define what we want those color palettes to be:
 
 # Rename metamorphosizing to metamorphosing
 pglsres.cdmass.all.exp <- pglsres.cdmass.all.exp %>%
-    mutate(Development = recode(Development, "metamorphosizing" = "metamorphosing"))
-
+  mutate(Development = case_when(
+    Development == "metamorphosizing" ~ "metamorphosing",
+    TRUE ~ Development
+  ))
 # Rename no larva to no larvae
 pglsres.cdmass.all.exp <- pglsres.cdmass.all.exp %>%
-    mutate(Larval_Habitat = recode(Larval_Habitat, "no larva" = "no larvae"))
+  mutate(Larval_Habitat = case_when(
+    Larval_Habitat == "no larva" ~ "no larvae",
+    TRUE ~ Larval_Habitat
+  ))
 
 # Define a colorblind-friendly vector of colors for adult habitat, activity period, larval habitat, and development mode
 col_hab <- c("aquatic" = "#0072B2",
@@ -126,7 +143,8 @@ col_hab <- c("aquatic" = "#0072B2",
              "terrestrial" = "#E69F00")
 col_act <- c("both" = "deeppink3",
              "diurnal" = "darkgoldenrod1", 
-             "nocturnal" = "blueviolet")
+             "nocturnal" = "blueviolet",
+             "NA" = "grey")
 col_larv <- c("lentic water" = "royalblue1", 
          "lotic water" = "skyblue1",
          "no larvae" = "lightcoral",
@@ -243,10 +261,76 @@ We repeat the same steps for phylogenies colored by activity period, larval habi
 
 ## Phylogenetic distribution of eye size by activity period
 
-```{r, fig.height=18, fig.width=6}
+```{r}
+####TEST
 
-# Filter out species with NA for activity period
-sal.phy.act <- sal.phy %>% filter(!is.na(Activity_Period))
+# Create a base plot to get y positions
+p <- ggtree(caudatatree)
+
+# Extract data from the plot
+tree_data <- p$data
+
+sal.phy <- sal.phy %>%
+  rename(label = tip)
+
+# Merge tree data with sal.phy based on the tip labels
+sal.phy <- sal.phy %>%
+  left_join(tree_data %>% select(label, y), by = "label")
+head(sal.phy)
+
+# Make the phylogeny plot
+p_act <- ggtree(caudatatree) %<+% labs + 
+  geom_tiplab(size = 3, aes(label = labels), fontface = 3) + 
+  xlim_tree(375) + 
+  coord_cartesian(clip = 'off') 
+
+# Make a second plot next to the phylogeny (bars for cornea diameter)
+p2_act <- facet_plot(p_act, panel="Cornea diameter (mm)", data=sal.phy, 
+                     geom=geom_segment, 
+                     aes(x=0, xend=cor_av, y=y, yend=y, color = Activity_Period), 
+                     size = 3, alpha = 0.7) +
+                     geom_segment(data = sal.phy,
+                      aes(x = 0, xend = cor_av, y = y, yend = y),
+                      color = "black", size = 0.5)
+
+# Make a third plot next to the first two (bars for relative cornea size)
+p3_act <- facet_plot(p2_act, panel='Relative cornea size', data=sal.phy, 
+                     geom=geom_segment, 
+                     aes(x=1, xend=pglsres.cdmass, y=y, yend=y, color = Activity_Period), 
+                     size=3, alpha = 0.7) +
+          geom_segment(data=sal.phy, 
+                       aes(x=1, xend=pglsres.cdmass, y=y, yend=y), size=0.5, alpha=1) +
+            geom_segment(data = sal.phy,
+               aes(x = 1, xend = pglsres.cdmass, y = y, yend = y),
+               color = "black", size = 0.5) +
+  scale_color_manual(values = col_act) +
+  theme_tree2(legend.position = "none") +
+  theme(
+    axis.line.x = element_blank(),
+    axis.text.x = element_blank(),
+    axis.ticks.x = element_blank(),
+    axis.title.x = element_blank()
+  ) 
+
+# Control widths of panels
+gt_act = ggplot_gtable(ggplot_build(p3_act))
+
+#gtable_show_layout(gt_act) # Will show you the layout - very handy function
+#gt_act # See plot layout in table format
+gt_act$layout$l[grep('tree', gt_act$layout$name)] # You want to find the column specific to panel-2
+gt_act$widths[7] = 0.5*gt_act$widths[5] # Reduce column 7
+gt_act$widths[9] = 0.5*gt_act$widths[5]
+
+# Print figure
+plot(gt_act)
+
+# Export plot to pdf 
+ggsave("../Plots/act-tree-figure.pdf", plot = gt_act, device = "pdf", width = 12, height = 18)
+
+####TEST
+```
+
+```{r, fig.height=18, fig.width=6}
 
 # Make the phylogeny plot
 p_act <- ggtree(caudatatree) %<+% labs + 
@@ -255,10 +339,10 @@ p_act <- ggtree(caudatatree) %<+% labs +
    coord_cartesian(clip = 'off') 
 
 # Make a second plot next to the phylogeny (bars for cornea diameter)
-p2_act <- facet_plot(p_act, panel="Cornea diameter (mm)", data=sal.phy.act, geom=geom_segment, aes(x=0, xend=cor_av, y=y, yend=y, color = Activity_Period), size = 3, alpha = 0.7) 
+p2_act <- facet_plot(p_act, panel="Cornea diameter (mm)", data=sal.phy, geom=geom_segment, aes(x=0, xend=cor_av, y=y, yend=y, color = Activity_Period), size = 3, alpha = 0.7) 
 
 # Make a third plot next to the first two (bars for relative cornea size)
-p3_act <- facet_plot(p2_act, panel='Relative cornea size', data=sal.phy.act, geom=geom_segment, aes(x=1, xend=pglsres.cdmass, y=y, yend=y, color = Activity_Period), size=3, alpha = 0.7) +
+p3_act <- facet_plot(p2_act, panel='Relative cornea size', data=sal.phy, geom=geom_segment, aes(x=1, xend=pglsres.cdmass, y=y, yend=y, color = Activity_Period), size=3, alpha = 0.7) +
   scale_color_manual(values = col_act) +
   theme_tree2(legend.position = "none") +
   theme(
