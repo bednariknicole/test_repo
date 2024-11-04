@@ -251,15 +251,23 @@ shape_cdmass <- c("frogs" = 19,
 
 #plot data
 plot_cdmass <- ggplot(frogs.cdmass, aes(x = mass_av, y = cor_av, color = "frogs", pch = "frogs")) +
-  geom_point(alpha = 0.5, size = 1) +
+  geom_point(alpha = 0.5, size = 2.5) +
   theme_bw() +
-  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), legend.text.align = 0) +
-  scale_y_log10(name = "Cornea diameter (mm)") +
-  scale_x_log10(name = "Cube root of mass (g)") +
-  geom_abline(slope = coef(pgls_frog.cdmass)[[2]], intercept = coef(pgls_frog.cdmass)[[1]], color = col_cdmass["frogs"]) +
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), 
+        legend.text.align = 0, 
+        axis.text = element_text(size = 17), 
+        axis.title = element_text(size = 17), 
+        axis.ticks = element_line(size = 0.8),
+        axis.ticks.length = unit(0.15, "cm"),
+        panel.border = element_rect(size = 1.45),
+        axis.text.x = element_text(margin = margin(t = 7)),
+        axis.text.y = element_text(margin = margin(r = 7))) +
+  scale_y_log10(name = "cornea diameter (mm)") +
+  scale_x_log10(name = "cube root of mass (g)") +
+  geom_abline(slope = coef(pgls_frog.cdmass)[[2]], intercept = coef(pgls_frog.cdmass)[[1]], color = col_cdmass["frogs"], size = 1.15) +
   #add salamanders to plot
-  geom_point(data = pglsres.cdmass.all, aes(x = rootmass_av, y = cor_av, color = "salamanders", pch = "salamanders"), alpha = 0.5, size = 1) +
-  geom_abline(slope = coef(pgls_salamanders.cdmass)[[2]], intercept = coef(pgls_salamanders.cdmass)[[1]], color = col_cdmass["salamanders"]) +
+  geom_point(data = pglsres.cdmass.all, aes(x = rootmass_av, y = cor_av, color = "salamanders", pch = "salamanders"), alpha = 0.5, size = 2.5) +
+  geom_abline(slope = coef(pgls_salamanders.cdmass)[[2]], intercept = coef(pgls_salamanders.cdmass)[[1]], color = col_cdmass["salamanders"], size = 1.15) +
   scale_color_manual(values = col_cdmass, name = "Group") +
   scale_shape_manual(values = shape_cdmass, name = "Group")
 
@@ -388,20 +396,28 @@ shape_ed <- c("frogs" = 19,
 
 # Plot data
 plot_edmass <- ggplot(frogs.edmass, aes(x = mass_av, y = eye_av, color = "frogs", pch = "frogs")) +
-  geom_point(alpha = 0.5, size = 1) +
+  geom_point(alpha = 0.5, size = 2.5) +
   theme_bw() +
-  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), legend.text.align = 0) +
-  scale_y_log10(name = "External eye diameter (mm)") +
-  scale_x_log10(name = "Cube root of mass (g)") +
-  geom_abline(slope = coef(pgls_frog.edmass)[[2]], intercept = coef(pgls_frog.edmass)[[1]], color = col_ed["frogs"]) +
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), 
+        legend.text.align = 0,
+        axis.text = element_text(size = 17), 
+        axis.title = element_text(size = 17), 
+        axis.ticks = element_line(size = 0.8),
+        axis.ticks.length = unit(0.15, "cm"),
+        panel.border = element_rect(size = 1.45),
+        axis.text.x = element_text(margin = margin(t = 7)),
+        axis.text.y = element_text(margin = margin(r = 7))) +
+  scale_y_log10(name = "eye diameter (mm)") +
+  scale_x_log10(name = "cube root of mass (g)", breaks = c(1, 3, 10), limits=c(NA,10.01)) +
+  geom_abline(slope = coef(pgls_frog.edmass)[[2]], intercept = coef(pgls_frog.edmass)[[1]], color = col_ed["frogs"], size = 1.15) +
   #add salamanders to plot
-  geom_point(data = av.sal, aes(x = rootmass_av, y = eye_av, color = "salamanders", pch = "salamanders"), alpha = 0.5, size = 1) +
-  geom_abline(slope = coef(pgls_sal.edmass)[[2]], intercept = coef(pgls_sal.edmass)[[1]], color = col_ed["salamanders"]) +
+  geom_point(data = av.sal, aes(x = rootmass_av, y = eye_av, color = "salamanders", pch = "salamanders"), alpha = 0.5, size = 2.5) +
+  geom_abline(slope = coef(pgls_sal.edmass)[[2]], intercept = coef(pgls_sal.edmass)[[1]], color = col_ed["salamanders"], size = 1.15) +
   #add fishes to plot
-  geom_point(data = fishes_avs, aes(x = mass_av, y = TD_av, color = "fishes", pch = "fishes"), alpha = 0.5, size = 1) +
-  geom_abline(slope = coef(pgls_fish.edmass)[[2]], intercept = coef(pgls_fish.edmass)[[1]], color = col_ed["fishes"]) +
+  geom_point(data = fishes_avs, aes(x = mass_av, y = TD_av, color = "fishes", pch = "fishes"), alpha = 0.5, size = 2.5) +
+  geom_abline(slope = coef(pgls_fish.edmass)[[2]], intercept = coef(pgls_fish.edmass)[[1]], color = col_ed["fishes"], size = 1.15) +
   scale_color_manual(values = col_ed, name = "Group") +
-  scale_shape_manual(values = shape_ed, name = "Group")
+  scale_shape_manual(values = shape_ed, name = "Group") 
 
 #show plot
 plot_edmass
@@ -457,6 +473,20 @@ plot(pgls_frog.edsvl)
 
 summary(pgls_frog.edsvl)
 
+# Residuals for PGLS of eye diameter ~ SVL
+
+# Extract PGLS residuals 
+pglsres.edsvl.frog <- residuals(pgls_frog.edsvl) 
+
+# Name residuals
+colnames(pglsres.edsvl.frog) <- "pglsres.edsvl.frog" 
+
+# Making PGLS vector into a dataframe
+pglsres.edsvl.frog <- as.data.frame(pglsres.edsvl.frog)
+
+# Exponentiate PGLS residuals for plots
+pglsres.edsvl.frog <- pglsres.edsvl.frog %>%
+  mutate(pglsres.edsvl.frog = 10^pglsres.edsvl.frog)
 ```
 
 
@@ -478,6 +508,21 @@ par(mfrow = c(2, 2))
 plot(pgls_sal.edsvl)
 
 summary(pgls_sal.edsvl)
+
+# Residuals for PGLS of eye diameter ~ SVL
+
+# Extract PGLS residuals 
+pglsres.edsvl.sal <- residuals(pgls_sal.edsvl) 
+
+# Name residuals
+colnames(pglsres.edsvl.sal) <- "pglsres.edsvl.sal" 
+
+# Making PGLS vector into a dataframe
+pglsres.edsvl.sal <- as.data.frame(pglsres.edsvl.sal)
+
+# Exponentiate PGLS residuals for plots
+pglsres.edsvl.sal <- pglsres.edsvl.sal %>%
+  mutate(pglsres.edsvl.sal = 10^pglsres.edsvl.sal)
 ```
 
 ## Squamates
@@ -517,6 +562,21 @@ par(mfrow = c(2, 2))
 plot(pgls_squam.edsvl)
 
 summary(pgls_squam.edsvl)
+
+# Residuals for PGLS of eye diameter ~ SVL
+
+# Extract PGLS residuals 
+pglsres.edsvl.squam <- residuals(pgls_squam.edsvl) 
+
+# Name residuals
+colnames(pglsres.edsvl.squam) <- "pglsres.edsvl.squam" 
+
+# Making PGLS vector into a dataframe
+pglsres.edsvl.squam <- as.data.frame(pglsres.edsvl.squam)
+
+# Exponentiate PGLS residuals for plots
+pglsres.edsvl.squam <- pglsres.edsvl.squam %>%
+  mutate(pglsres.edsvl.squam = 10^pglsres.edsvl.squam)
 ```
 
 ## Plot for eye vs. SVL
@@ -538,27 +598,38 @@ shape_edsvl <- c("frogs" = 19,
 
 # Plot data
 plot_edsvl <- ggplot(frogs.edsvl, aes(x = svl_av, y = eye_av, color = "frogs", pch = "frogs")) +
-  geom_point(alpha = 0.5, size = 1) +
+  geom_point(alpha = 0.5, size = 2.5) +
   theme_bw() +
-  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), legend.text.align = 0) +
-  scale_y_log10(name = "External eye diameter (mm)") +
-  scale_x_log10(name = "Snout-vent length (mm)") +
-  geom_abline(slope = coef(pgls_frog.edsvl)[[2]], intercept = coef(pgls_frog.edsvl)[[1]], color = col_edsvl["frogs"]) +
+  theme(panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(), 
+        legend.text.align = 0,
+        axis.text = element_text(size = 17), 
+        axis.title = element_text(size = 17), 
+        axis.ticks = element_line(size = 0.8),
+        axis.ticks.length = unit(0.15, "cm"),
+        panel.border = element_rect(size = 1.45),
+        axis.text.x = element_text(margin = margin(t = 7)),
+        axis.text.y = element_text(margin = margin(r = 7))) +
+  scale_y_log10(name = "eye diameter (mm)") +
+  scale_x_log10(name = "snout-vent length (mm)") +
+  geom_abline(slope = coef(pgls_frog.edsvl)[[2]], intercept = coef(pgls_frog.edsvl)[[1]], color = col_edsvl["frogs"], size = 1.15) +
   #add salamanders to plot
-  geom_point(data = av.sal, aes(x = svl_av, y = eye_av, color = "salamanders", pch = "salamanders"), alpha = 0.5, size = 1) +
-  geom_abline(slope = coef(pgls_sal.edsvl)[[2]], intercept = coef(pgls_sal.edsvl)[[1]], color = col_edsvl["salamanders"]) +
+  geom_point(data = av.sal, aes(x = svl_av, y = eye_av, color = "salamanders", pch = "salamanders"), alpha = 0.5, size = 2.5) +
+  geom_abline(slope = coef(pgls_sal.edsvl)[[2]], intercept = coef(pgls_sal.edsvl)[[1]], color = col_edsvl["salamanders"], size = 1.15) +
   #add squamates to plot
-  geom_point(data = squamate.ed, aes(x = svl_av, y = TD_av, color = Subgroup, pch = Subgroup), alpha = 0.5, size = 1) +
+  geom_point(data = squamate.ed, aes(x = svl_av, y = TD_av, color = Subgroup, pch = Subgroup), alpha = 0.5, size = 2.5) +
   #snake line
-  geom_abline(slope = coef(pgls_squam.edsvl)[[2]], intercept = coef(pgls_squam.edsvl)[[1]], color = col_edsvl["colubrid snakes"]) +
+  geom_abline(slope = coef(pgls_squam.edsvl)[[2]], intercept = coef(pgls_squam.edsvl)[[1]], color = col_edsvl["colubrid snakes"], size = 1.15) +
   #gecko line
   geom_abline(slope = coef(pgls_squam.edsvl)[[2]] + coef(pgls_squam.edsvl)[[4]], 
-              intercept = coef(pgls_squam.edsvl)[[1]] + coef(pgls_squam.edsvl)[[3]], color = col_edsvl["geckos"]) +
+              intercept = coef(pgls_squam.edsvl)[[1]] + coef(pgls_squam.edsvl)[[3]], color = col_edsvl["geckos"], size = 1.15) +
   scale_color_manual(values = col_edsvl, name = "Group") +
   scale_shape_manual(values = shape_edsvl, name = "Group")
-
+ 
 # Show plot
 plot_edsvl
+interactive_plot_edsvl <- ggplotly(plot_edsvl)
+interactive_plot_edsvl
 ```
 
 # Figure

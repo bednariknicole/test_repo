@@ -331,7 +331,6 @@ ggsave("../Plots/act-tree-figure.pdf", plot = gt_act, device = "pdf", width = 12
 ```
 
 ```{r, fig.height=18, fig.width=6}
-
 # Make the phylogeny plot
 p_act <- ggtree(caudatatree) %<+% labs + 
      geom_tiplab(size = 3, aes(label = labels), fontface = 3) + 
@@ -340,6 +339,8 @@ p_act <- ggtree(caudatatree) %<+% labs +
 
 # Make a second plot next to the phylogeny (bars for cornea diameter)
 p2_act <- facet_plot(p_act, panel="Cornea diameter (mm)", data=sal.phy, geom=geom_segment, aes(x=0, xend=cor_av, y=y, yend=y, color = Activity_Period), size = 3, alpha = 0.7) 
+plot(p2_act)
+print(sal.phy$y)
 
 # Make a third plot next to the first two (bars for relative cornea size)
 p3_act <- facet_plot(p2_act, panel='Relative cornea size', data=sal.phy, geom=geom_segment, aes(x=1, xend=pglsres.cdmass, y=y, yend=y, color = Activity_Period), size=3, alpha = 0.7) +

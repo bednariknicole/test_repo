@@ -1,7 +1,7 @@
 ---
 title: "Salamander eye scaling and investment"
 author: "Nicole Bednarik & Katie Thomas"
-date: 28 May 2024
+date: 20 Sep 2024
 output:
   html_document:
     theme: flatly
@@ -18,18 +18,12 @@ library(smatr)
 library(picante)
 library(nlme)
 library(ape)
-library(evobiR)
-library(geiger)
 library(caper)
 library(phytools)
-library(phylotools)
 library(plotly)
-library(kableExtra)
 library(gridExtra)
-library(ggimage)
+library(geiger)
 library(ggtree)
-library(grid)
-library(gtable)
 library(cowplot)
 library(knitr)
 library(mvMORPH)

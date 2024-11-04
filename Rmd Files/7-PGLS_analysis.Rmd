@@ -223,7 +223,7 @@ anova(habitat.regression.1)
 tukey_inv <- glht(habitat.regression, linfct = mcp(Adult_Habitat = "Tukey"))
 ```
 
-# Kruskal Wallis Test for cornea investment vs. adult habitat 
+# Kruskal Wallis and Dunn test for cornea investment vs. adult habitat 
 
 ```{r}
 # Test for differences in mean (absolute) cornea size across habitat groups: Kruskal-Wallis test
@@ -245,14 +245,7 @@ pairwise.wilcox.test(pglsres.cdmass.all$pglsres.cdmass, pglsres.cdmass.all$Adult
 dunn.test.inv <- dunn.test(pglsres.cdmass.all$pglsres.cdmass, pglsres.cdmass.all$Adult_Habitat, method = "bonferroni")
 ```
 
-# Linear Regression and ANOVA
-
-```{r}
-# linear regression model
-lm_adulthabitat <- lm(cor_av~ Adult_Habitat + rootmass_av, data = pglsres.cdmass.all)
-summary(lm_adulthabitat)
-anova(lm_adulthabitat)
-```
+----------------------------------
 
 # Activity Period PGLS
 

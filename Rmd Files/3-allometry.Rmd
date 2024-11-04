@@ -1,7 +1,7 @@
 ---
 title: "Salamander eye scaling and investment"
 author: "Nicole Bednarik & Katie Thomas"
-date: 28 May 2024
+date: 20 Sep 2024
 output:
   html_document:
     theme: flatly
@@ -14,25 +14,18 @@ output:
 ```{r setup, include = FALSE}
 
 # Load package libraries
-library(plyr)
+library(phytools)
+library(dplyr)
 library(smatr)
-library(picante)
 library(nlme)
 library(ape)
-library(evobiR)
 library(geiger)
 library(caper)
-library(phylotools)
 library(plotly) 
-library(kableExtra)
 library(gridExtra)
-library(ggimage)
-library(grid)
-library(gtable)
-library(cowplot)
-library(knitr)
 library(mvMORPH)
 library(tidyverse) 
+library(knitr)
 
 # Markdown settings
 knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE, fig.height = 4.5, fig.width=8)
@@ -241,6 +234,7 @@ abline(pgls_edmass)
 ```{r plot-edmass} 
 
 # Plot average eye diameter (mm) against cube root of mass (g)
+## Size and dimensions modified for manuscript  
 plot_pgls_edmass <- ggplot(av.sal, aes(y=eye_av, x=rootmass_av, text=Genus_Species)) +
   geom_point(alpha = 0.9, aes(color = Adult_Habitat), size = 5, na.rm = TRUE) + 
   scale_color_manual(values = col_hab, name = "Adult habitat") +
@@ -300,6 +294,7 @@ abline(pgls_edsvl)
 ```{r plot-edsvl} 
 
 # Plot average eye diameter (mm) against snout-vent length (mm)
+## Size and dimensions modified for manuscript  
 plot_pgls_edsvl <- ggplot(av.sal, aes(y=eye_av, x=svl_av, text=Genus_Species)) +
   geom_point(alpha = 0.9, aes(color = Adult_Habitat), size = 5, na.rm = TRUE) +  
   scale_color_manual(values = col_hab, name = "Adult habitat") +
@@ -357,6 +352,7 @@ abline(pgls_edcd)
 ```{r plot-edcd} 
 
 # Plot average eye diameter (mm) against cornea diameter (mm)
+## Size and dimensions modified for manuscript  
 plot_pgls_edcd <- ggplot(av.sal, aes(y=cor_av, x=eye_av, text=Genus_Species)) +
   geom_point(alpha = 0.9, aes(color = Adult_Habitat), size = 5, na.rm = TRUE) +  
   scale_color_manual(values = col_hab, name = "Adult habitat") +
@@ -414,6 +410,7 @@ abline(pgls_cdmass)
 ```{r plot-cdmass} 
 
 # Plot average cornea diameter (mm) against cube root of mass (g)
+## Size and dimensions modified for manuscript  
 plot_pgls_cdmass <- ggplot(av.sal, aes(y=cor_av, x=rootmass_av, text=Genus_Species)) +
   geom_point(alpha = 0.9, aes(color = Adult_Habitat), size = 5, na.rm = TRUE) +  
   scale_color_manual(values = col_hab, name = "Adult habitat") +
@@ -471,6 +468,7 @@ abline(pgls_cdsvl)
 ```{r plot-cdsvl} 
 
 # Plot average cornea diameter (mm) against snout-vent length (mm)
+## Size and dimensions modified for manuscript  
 plot_pgls_cdsvl <- ggplot(av.sal, aes(y=cor_av, x=svl_av, text=Genus_Species)) +
   geom_point(alpha = 0.9, aes(color = Adult_Habitat), size = 5, na.rm = TRUE) +  
   scale_color_manual(values = col_hab, name = "Adult habitat") +
@@ -528,6 +526,7 @@ abline(pgls_svlmass)
 ```{r plot-svlmass} 
 
 # Plot average snout-vent length (mm) against cube root of mass (g)
+## Size and dimensions modified for manuscript  
 plot_pgls_svlmass <- ggplot(av.sal, aes(y=svl_av, x=rootmass_av, text=Genus_Species)) +
   geom_point(alpha = 0.9, aes(color = Adult_Habitat), size = 5, na.rm = TRUE) +  
   scale_color_manual(values = col_hab, name = "Adult habitat") +
