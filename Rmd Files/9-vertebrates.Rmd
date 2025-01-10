@@ -81,6 +81,9 @@ av.sal <- data.frame(read.csv("../Data/Tidy/salamanders_averages.csv", header=TR
 
 # Import pruned phylogeny
 caudatatree <- read.nexus("../Data/Tidy/caudata-tree.nex")
+
+# Import tidied data
+pglsres.cdmass.all <- data.frame(read.csv("../Data/Tidy/pglsres.cdmass.all.csv", header=TRUE, na.strings=c("", "NA", " ","<1")))
 ```
 
 ## Fishes
