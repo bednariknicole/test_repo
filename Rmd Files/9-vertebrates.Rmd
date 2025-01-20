@@ -322,12 +322,26 @@ pgls_frog.edmass <- pgls(log10(eye_av) ~ log10(rootmass_av),
                lambda = "ML", #uses Maximum Liklihood estimate of lambda
                param.CI = 0.95)
 
+# Extract PGLS residuals 
+pglsres.frog.edmass <- residuals(pgls_frog.edmass) 
+
+# Name residuals
+colnames(pglsres.frog.edmass) <- "pglsres.frog" 
+
+# Making PGLS vector into a dataframe
+pglsres.frog.edmass <- as.data.frame(pglsres.frog.edmass)
+
+# Exponentiate PGLS residuals for plotting
+pglsres.frog.edmass1 <- pglsres.frog.edmass %>%
+  mutate(pglsres.frog = 10^pglsres.frog)
+
 # Check model assumptions with diagnostic plots
 par(mar = c(4,4,2,2))
 par(mfrow = c(2, 2))
 plot(pgls_frog.edmass)
 
 summary(pgls_frog.edmass)
+
 ```
 
 
@@ -376,6 +390,20 @@ pgls_fish.edmass <- pgls(log10(TD_av) ~ log10(rootmass_av),
                data = fishes.comp, 
                lambda = "ML", #uses Maximum Liklihood estimate of lambda
                param.CI = 0.95)
+
+# Extract PGLS residuals 
+pglsres.fish.edmass <- residuals(pgls_fish.edmass) 
+
+# Name residuals
+colnames(pglsres.fish.edmass) <- "pglsres.fish" 
+
+# Making PGLS vector into a dataframe
+pglsres.fish.edmass <- as.data.frame(pglsres.fish.edmass)
+
+# Exponentiate PGLS residuals for plotting
+pglsres.fish.edmass1 <- pglsres.fish.edmass %>%
+  mutate(pglsres.fish = 10^pglsres.fish)
+
 
 # Check model assumptions with diagnostic plots
 par(mar = c(4,4,2,2))
