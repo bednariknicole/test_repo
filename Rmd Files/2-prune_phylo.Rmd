@@ -154,20 +154,33 @@ All the species are now matching! Now we prune the tree to match the species in 
 
 ```{r prune-tree, results = "hide"}
 
+## Produce tree matching species with eye size data
+
 # Make list of taxa to drop (in tree but not in dataset)
 drops <- setdiff(tree_graft2$tip.label, tip_species$Genus_Species)
-drops_blind <- setdiff(tree_graft2$tip.label, tip_species_blind$Genus_Species)
 
 # Drop unwanted tips from phylogeny
 tree.pruned <- drop.tip(phy = tree_graft2, tip = drops) 
-tree.pruned_blind <- drop.tip(phy = tree_graft2, tip = drops_blind) 
 
 # See which tips you've kept in your phylogeny
 tree.pruned$tip.label
+
+# Check that phylogeny tips and data match exactly (if they match will return "OK")
+name.check(tree.pruned, rownames(tip_species))
+
+## Produce tree that includes eye size data species plus two blind species (no eyes)
+
+# Make list of taxa to drop (in tree but not in dataset)
+drops_blind <- setdiff(tree_graft2$tip.label, tip_species_blind$Genus_Species)
+
+# Drop unwanted tips from phylogeny
+tree.pruned_blind <- drop.tip(phy = tree_graft2, tip = drops_blind) 
+
+# See which tips you've kept in your phylogeny
 tree.pruned_blind$tip.label
   
 # Check that phylogeny tips and data match exactly (if they match will return "OK")
-name.check(tree.pruned, names)
+name.check(tree.pruned_blind, names)
 ```
 
 The pruned tree tip labels and the dataset species names match exactly. We can plot the tree to check that it looks good. 
