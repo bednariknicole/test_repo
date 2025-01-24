@@ -1,7 +1,7 @@
 ---
 title: "Salamander eye scaling and investment"
 author: "Nicole Bednarik & Katie Thomas"
-date: 20 Sep 2024
+date: 23 Jan 2025
 output:
   html_document:
     theme: flatly
@@ -253,7 +253,7 @@ plot_pgls_edmass <- ggplot(av.sal, aes(y=eye_av, x=rootmass_av, text=Genus_Speci
   scale_x_log10(name = "Cube root of mass (g)", breaks = c(1, 3, 5), limits = c(0.5, 5.5)) +
   geom_abline(slope = coef(pgls_edmass)[[2]], intercept = coef(pgls_edmass)[[1]], linetype = "solid", size = 1.5) 
 
-plot(plot_pgls_edmass)
+ggplotly(plot_pgls_edmass)
 
 # Save the plot as a rectangle with specified width and height
 ggsave("../Plots/plot_pgls_edmass.png", plot = plot_pgls_edmass, width = 9, height = 7.5, units = "in")
@@ -313,7 +313,7 @@ plot_pgls_edsvl <- ggplot(av.sal, aes(y=eye_av, x=svl_av, text=Genus_Species)) +
   scale_x_log10(name = "Snout-vent length (mm)", breaks = c(30, 70, 150), limits = c(25,160)) +
   geom_abline(slope = coef(pgls_edsvl)[[2]], intercept = coef(pgls_edsvl)[[1]], linetype = "solid", size = 1.5)
 
-plot(plot_pgls_edsvl)
+ggplotly(plot_pgls_edsvl)
 
 # Save the plot as a rectangle with specified width and height
 ggsave("../Plots/plot_pgls_edsvl.png", plot = plot_pgls_edsvl, width = 9, height = 7.5, units = "in")
@@ -371,7 +371,7 @@ plot_pgls_edcd <- ggplot(av.sal, aes(y=cor_av, x=eye_av, text=Genus_Species)) +
   scale_x_log10(name = "Eye diameter (mm)", breaks = c(2, 3, 7)) +
   geom_abline(slope = coef(pgls_edcd)[[2]], intercept = coef(pgls_edcd)[[1]], linetype = "solid", size = 1.5)
 
-plot(plot_pgls_edcd)
+ggplotly(plot_pgls_edcd)
 
 # Save the plot as a rectangle with specified width and height
 ggsave("../Plots/plot_pgls_edcd.png", plot = plot_pgls_edcd, width = 9, height = 7.5, units = "in")
@@ -429,7 +429,7 @@ plot_pgls_cdmass <- ggplot(av.sal, aes(y=cor_av, x=rootmass_av, text=Genus_Speci
   scale_x_log10(name = "Cube root of mass (g)", breaks = c(1, 3, 5), limits = c(0.5, 5.5)) +
   geom_abline(slope = coef(pgls_cdmass)[[2]], intercept = coef(pgls_cdmass)[[1]], linetype = "solid", size = 1.5)
 
-plot(plot_pgls_cdmass)
+ggplotly(plot_pgls_cdmass)
 
 # Save the plot as a rectangle with specified width and height
 ggsave("../Plots/plot_pgls_cdmass.png", plot = plot_pgls_cdmass, width = 9, height = 7.5, units = "in")
@@ -487,7 +487,7 @@ plot_pgls_cdsvl <- ggplot(av.sal, aes(y=cor_av, x=svl_av, text=Genus_Species)) +
   scale_x_log10(name = "Snout-vent length (mm)", breaks = c(30, 70, 150), limits = c(25,160)) +
   geom_abline(slope = coef(pgls_cdsvl)[[2]], intercept = coef(pgls_cdsvl)[[1]], linetype = "solid", size = 1.5)
 
-plot(plot_pgls_cdsvl)
+ggplotly(plot_pgls_cdsvl)
 
 # Save the plot as a rectangle with specified width and height
 ggsave("../Plots/plot_pgls_cdsvl.png", plot = plot_pgls_cdsvl, width = 9, height = 7.5, units = "in")
@@ -545,7 +545,7 @@ plot_pgls_svlmass <- ggplot(av.sal, aes(y=svl_av, x=rootmass_av, text=Genus_Spec
   scale_x_log10(name = "Cube root of mass (g)", breaks = c(1, 3, 5), limits = c(0.5,5.5)) +
   geom_abline(slope = coef(pgls_svlmass)[[2]], intercept = coef(pgls_svlmass)[[1]], linetype = "solid", size = 1.5)
 
-plot(plot_pgls_svlmass)
+ggplotly(plot_pgls_svlmass)
 
 # Save the plot as a rectangle with specified width and height
 ggsave("../Plots/plot_pgls_svlmass.png", plot = plot_pgls_svlmass, width = 9.4, height = 7.5, units = "in")
